@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Quiz - GTNHS Smart Quiz</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='student_quiz.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/Gtnhs logo.png') }}">
+</head>
+<body>
+
+    <script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
+
+    <div class="container">
+        <div class="header">
+            <h1>GENERAL TINIO NATIONAL HIGH SCHOOL</h1>
+            <p>Smart Quiz System - Student Portal</p>
+        </div>
+
+        <!-- SIMPLIFIED Registration Form -->
+        <div class="registration-form" id="registrationForm">
+            <h2 style="color: #2c3e50; margin-bottom: 30px; text-align: center;">Student Login</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 25px;">
+                Enter your LRN/Student ID and Section to access the quiz
+            </p>
+            
+            <div class="form-group">
+                <label><i class="fas fa-id-card"></i> LRN / Student ID *</label>
+                <input type="text" id="studentLRN" placeholder="Enter your LRN or Student ID" required>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-users"></i> Section *</label>
+                <input type="text" id="section" placeholder="Enter your section (e.g., 7-A, 8-B)" required>
+            </div>
+            
+            <button class="btn-submit" onclick="registerStudent()">
+                <i class="fas fa-sign-in-alt"></i> Start Quiz
+            </button>
+            
+            <div style="margin-top: 20px; text-align: center; color: #666; font-size: 14px;">
+                <p><i class="fas fa-info-circle"></i> Your name and grade level will be automatically retrieved.</p>
+            </div>
+        </div>
+
+        <!-- Quiz Interface (unchanged) -->
+        <div class="quiz-interface" id="quizInterface" style="display: none;">
+            <div class="quiz-header">
+                <div class="quiz-info">
+                    <h2 id="quizTitle">Loading Quiz...</h2>
+                    <div class="quiz-meta">
+                        <span id="quizSubject"></span>
+                        <span id="quizSection"></span>
+                        <span id="quizGrade"></span>
+                    </div>
+                </div>
+                <div class="timer-section">
+                    <div class="timer-label">Time Remaining</div>
+                    <div class="timer-display" id="timerDisplay">00:00:00</div>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <div class="progress-info">
+                    <span>Question: <span id="currentQuestionNumber">1</span>/<span id="totalQuestions">0</span></span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="question-container" id="questionContainer">
+                <div class="question-header">
+                    <div class="question-number">Question <span id="displayQuestionNumber">1</span></div>
+                    <div class="question-points" id="questionPoints">1 point</div>
+                </div>
+                
+                <div class="question-text" id="questionText"></div>
+                
+                <div class="answer-options" id="answerOptions"></div>
+                
+                <div class="question-navigation">
+                    <button class="btn-nav btn-previous" id="btnPrevious" onclick="previousQuestion()">← Previous</button>
+                    <button class="btn-nav btn-next" id="btnNext" onclick="nextQuestion()">Next →</button>
+                    <button class="btn-nav btn-submit-quiz" id="btnSubmit" onclick="submitQuiz()" style="display: none;">Submit Quiz</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section (unchanged) -->
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="score-display">
+                <h2>Quiz Completed!</h2>
+                <div class="score-circle" id="scoreCircle">
+                    <div class="score-number" id="scoreNumber">0%</div>
+                </div>
+                <div class="score-label">Your Score</div>
+            </div>
+
+            <div class="results-details">
+                <div class="result-grid">
+                    <div class="result-item">
+                        <span class="result-icon">📊</span>
+                        <div class="result-info">
+                            <span class="result-label">Total Questions</span>
+                            <span class="result-value" id="totalQuestionsResult">0</span>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-icon">✅</span>
+                        <div class="result-info">
+                            <span class="result-label">Correct Answers</span>
+                            <span class="result-value" id="correctAnswers">0</span>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-icon">❌</span>
+                        <div class="result-info">
+                            <span class="result-label">Wrong Answers</span>
+                            <span class="result-value" id="wrongAnswers">0</span>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-icon">⏱️</span>
+                        <div class="result-info">
+                            <span class="result-label">Time Taken</span>
+                            <span class="result-value" id="timeTaken">00:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-actions">
+                <button class="btn-finish" onclick="closeQuiz()">Finish</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pauseOverlay" style="display: none;"></div>
+
+<script>
+    const quizId = window.location.pathname.split('/').pop();
+    let quizData = null;
+    let studentData = null;
+    let allQuestions = [];
+    let currentQuestionIndex = 0;
+    let answers = {};
+    let timerInterval = null;
+    let statusCheckInterval = null;
+    let startTime = null;
+    let endTime = null;
+    let totalSeconds = 0;
+    let isQuizPaused = false;
+    let isQuizStopped = false;
+    let quizResults = null;
+
+    window.onload = function() {
+        loadQuizData();
+        setupEventListeners();
+    };
+
+    function setupEventListeners() {
+        // Enter key to submit registration
+        document.getElementById('registrationForm').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                registerStudent();
+            }
+        });
+
+        // Focus on LRN field when page loads
+        setTimeout(() => {
+            document.getElementById('studentLRN').focus();
+        }, 500);
+    }
+
+    function loadQuizData() {
+        console.log('Loading quiz data...');
+        showLoading('Loading quiz...');
+        
+        fetch(`/api/student/get_quiz/${quizId}`)
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                
+                if (data.success) {
+                    quizData = data.quiz;
+                    console.log('Quiz data loaded:', quizData);
+                    
+                    // Extract questions from quiz data
+                    extractQuestions();
+                    
+                    if (quizData.quiz_status !== 'active') {
+                        console.log('Quiz not active yet');
+                        showQuizNotStartedPopup();
+                        disableRegistrationForm();
+                        startStatusCheck();
+                    } else {
+                        console.log('Quiz is active, ready for login');
+                        enableRegistrationForm();
+                        
+                        const savedProgress = loadQuizProgress();
+                        if (savedProgress && savedProgress.studentData) {
+                            restoreQuizFromProgress(savedProgress);
+                        }
+                    }
+                    
+                    totalSeconds = (quizData.duration_minutes || 30) * 60;
+                    displayQuizInfo();
+                } else {
+                    Swal.fire({
+                        title: 'Quiz Not Available',
+                        text: data.message || 'This quiz is not currently active.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                    disableRegistrationForm();
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error loading quiz:', error);
+                Swal.fire({
+                    title: 'Connection Error',
+                    text: 'Failed to load quiz. Please check your connection.',
+                    icon: 'error',
+                    confirmButtonText: 'Retry'
+                }).then(() => {
+                    loadQuizData();
+                });
+            });
+    }
+
+    function extractQuestions() {
+        allQuestions = [];
+        
+        if (quizData.questions) {
+            if (Array.isArray(quizData.questions)) {
+                allQuestions = quizData.questions;
+            } else if (typeof quizData.questions === 'object') {
+                ['easy', 'medium', 'hard'].forEach(level => {
+                    if (quizData.questions[level] && Array.isArray(quizData.questions[level])) {
+                        quizData.questions[level].forEach(question => {
+                            allQuestions.push(question);
+                        });
+                    }
+                });
+            }
+        } else if (quizData.question_data && Array.isArray(quizData.question_data)) {
+            allQuestions = quizData.question_data;
+        }
+        
+        console.log('Total questions found:', allQuestions.length);
+        
+        allQuestions.forEach((question, index) => {
+            if (!question.question_id) {
+                question.question_id = `question_${index + 1}`;
+            }
+        });
+        
+        document.getElementById('totalQuestions').textContent = allQuestions.length;
+        
+        if (allQuestions.length === 0) {
+            showNoQuestionsError();
+        }
+    }
+
+    function disableRegistrationForm() {
+        const inputs = ['studentLRN', 'section'];
+        inputs.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.disabled = true;
+        });
+        
+        const submitBtn = document.querySelector('.btn-submit');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+        }
+    }
+
+    function enableRegistrationForm() {
+        const inputs = ['studentLRN', 'section'];
+        inputs.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.disabled = false;
+        });
+        
+        const submitBtn = document.querySelector('.btn-submit');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+        }
+    }
+
+    function showNoQuestionsError() {
+        Swal.fire({
+            title: 'No Questions Available',
+            html: `This quiz doesn't have any questions yet.<br><br>
+                   Please contact your teacher to add questions to this quiz.`,
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#667eea'
+        }).then(() => {
+            disableRegistrationForm();
+        });
+    }
+
+    function displayQuizInfo() {
+        document.getElementById('quizTitle').textContent = quizData.quiz_title || 'Quiz';
+        
+        if (quizData.subject_name) {
+            document.getElementById('quizSubject').textContent = quizData.subject_name;
+        }
+        if (quizData.section_name) {
+            document.getElementById('quizSection').textContent = quizData.section_name;
+        }
+        if (quizData.grade_level) {
+            document.getElementById('quizGrade').textContent = `Grade ${quizData.grade_level}`;
+        }
+    }
+
+    // SIMPLIFIED REGISTRATION FUNCTION
+function registerStudent() {
+    const lrn = document.getElementById('studentLRN').value.trim();
+    const section = document.getElementById('section').value.trim();
+
+    if (!lrn || !section) {
+        Swal.fire('Error', 'Please enter your LRN/ID and Section', 'error');
+        return;
+    }
+
+    showLoading('Registering for quiz...');
+    
+    // Try direct registration first
+    fetch('/api/student/register_direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            quiz_id: parseInt(quizId),
+            lrn: lrn,
+            section: section,
+            first_name: 'Student', // You can ask for name or auto-generate
+            last_name: lrn
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        
+        if (data.success) {
+            // Registration successful
+            studentData = {
+                lrn: lrn,
+                section: section,
+                first_name: 'Student', // Update with actual name if you have it
+                last_name: lrn,
+                grade_level: quizData?.grade_level || 7,
+                student_id: data.student_id
+            };
+            
+            console.log('Direct registration successful:', studentData);
+            startQuiz();
+        } else {
+            // Try the old check method
+            checkRegistrationOld(lrn, section);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Direct registration error:', error);
+        checkRegistrationOld(lrn, section);
+    });
+}
+
+
+function checkRegistrationOld(lrn, section) {
+    // Old registration check method
+    fetch('/api/student/check_registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            quiz_id: parseInt(quizId),
+            lrn: lrn,
+            section: section
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.registered) {
+                studentData = {
+                    lrn: lrn,
+                    section: section,
+                    first_name: data.first_name || '',
+                    last_name: data.last_name || '',
+                    grade_level: data.grade_level || quizData.grade_level
+                };
+                startQuiz();
+            } else {
+                Swal.fire({
+                    title: 'Registration Required',
+                    html: `
+                        <p>You need to be registered for this quiz.</p>
+                        <p>Please ask your teacher to add you to the student list.</p>
+                        <p style="color: #666; margin-top: 15px;">
+                            <strong>Current Quiz:</strong><br>
+                            Grade ${quizData.grade_level}, Section: ${quizData.section_name || 'Any'}
+                        </p>
+                    `,
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+            }
+        } else {
+            Swal.fire('Error', data.message || 'Registration check failed', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Registration check error:', error);
+        Swal.fire('Error', 'Connection error. Please try again.', 'error');
+    });
+}
+
+
+
+    function startQuiz() {
+        console.log('Starting quiz...');
+        
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+            statusCheckInterval = null;
+        }
+        
+        // Hide registration, show quiz
+        document.getElementById('registrationForm').style.display = 'none';
+        document.getElementById('quizInterface').style.display = 'block';
+        
+        // Update student info in quiz header
+        if (studentData.first_name && studentData.last_name) {
+            document.getElementById('quizTitle').textContent += ` - ${studentData.first_name} ${studentData.last_name}`;
+        }
+        
+        startTime = new Date();
+        startTimer();
+        startQuizStatusCheck();
+        displayCurrentQuestion();
+        updateProgress();
+        
+        saveQuizProgress();
+    }
+
+    function startQuizStatusCheck() {
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+        }
+        
+        statusCheckInterval = setInterval(() => {
+            if (!isQuizStopped) {
+                checkQuizStatusDuringQuiz();
+            }
+        }, 3000);
+    }
+
+    function checkQuizStatusDuringQuiz() {
+        fetch(`/api/student/get_quiz/${quizId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const newStatus = data.quiz.quiz_status;
+                    const oldStatus = quizData ? quizData.quiz_status : null;
+                    
+                    quizData = data.quiz;
+                    
+                    if (newStatus !== oldStatus) {
+                        handleQuizStatusChange(newStatus, oldStatus);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Status check error:', error);
+            });
+    }
+
+    function startTimer() {
+        updateTimerDisplay();
+        timerInterval = setInterval(() => {
+            if (!isQuizPaused && !isQuizStopped && totalSeconds > 0) {
+                totalSeconds--;
+                updateTimerDisplay();
+
+                if (totalSeconds === 300) {
+                    document.getElementById('timerDisplay').classList.add('warning');
+                    showWarning('5 minutes left! Please finish your quiz soon.');
+                }
+                
+                if (totalSeconds === 60) {
+                    showWarning('1 minute left! Hurry up!');
+                }
+            } else if (totalSeconds === 0 && !isQuizStopped) {
+                clearInterval(timerInterval);
+                autoSubmitQuiz();
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        document.getElementById('timerDisplay').textContent = 
+            `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function startStatusCheck() {
+        statusCheckInterval = setInterval(() => {
+            checkQuizStatus();
+        }, 3000);
+    }
+
+    function checkQuizStatus() {
+        fetch(`/api/student/get_quiz/${quizId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const newStatus = data.quiz.quiz_status;
+                    
+                    quizData = data.quiz;
+                    
+                    if (newStatus === 'active' && document.getElementById('registrationForm').style.display !== 'none') {
+                        clearInterval(statusCheckInterval);
+                        statusCheckInterval = null;
+                        
+                        enableRegistrationForm();
+                        showSuccess('Quiz is now active! You can login now.');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Status check error:', error);
+            });
+    }
+
+    function handleQuizStatusChange(newStatus, oldStatus) {
+        console.log('Status change:', oldStatus, '->', newStatus);
+        
+        if (newStatus === 'paused' && !isQuizPaused) {
+            isQuizPaused = true;
+            showPausedScreen();
+            Swal.fire({
+                title: '⏸️ Quiz Paused',
+                text: 'The teacher has paused the quiz. Please wait...',
+                icon: 'info',
+                confirmButtonText: 'OK',
+                allowOutsideClick: false,
+                timer: 3000
+            });
+        } else if (newStatus === 'active' && isQuizPaused) {
+            isQuizPaused = false;
+            hidePausedScreen();
+            Swal.fire({
+                title: '▶️ Quiz Resumed',
+                text: 'The quiz has been resumed. You can continue now.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else if ((newStatus === 'completed' || newStatus === 'ended') && !isQuizStopped) {
+            isQuizStopped = true;
+            forceSubmitQuiz();
+        }
+    }
+
+    function showPausedScreen() {
+        document.querySelectorAll('input, textarea, button, select').forEach(el => {
+            if (!el.classList.contains('menu-item')) {
+                el.disabled = true;
+            }
+        });
+        
+        let overlay = document.getElementById('pauseOverlay');
+        overlay.style.display = 'block';
+        overlay.innerHTML = `
+            <div class="pause-modal">
+                <div class="pause-icon">⏸️</div>
+                <h2>Quiz Paused</h2>
+                <p>The teacher has paused the quiz. Please wait for further instructions.</p>
+                <div class="pause-timer">Waiting for teacher to resume...</div>
+            </div>
+        `;
+    }
+
+    function hidePausedScreen() {
+        document.querySelectorAll('input, textarea, button, select').forEach(el => {
+            if (!el.classList.contains('menu-item')) {
+                el.disabled = false;
+            }
+        });
+        
+        document.getElementById('pauseOverlay').style.display = 'none';
+        showSuccess('Quiz resumed! You can continue now.');
+    }
+
+    function showQuizNotStartedPopup() {
+        Swal.fire({
+            title: '⏸️ Quiz Not Started',
+            html: `
+                <div style="text-align: center; padding: 10px;">
+                    <p style="margin-bottom: 15px; font-size: 16px;">
+                        This quiz session has not been started by the teacher yet.
+                    </p>
+                    <p style="color: #7a8a99; font-size: 14px;">
+                        Please wait for the teacher to start the session. 
+                        The page will automatically refresh when the quiz starts.
+                    </p>
+                </div>
+            `,
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#667eea',
+            allowOutsideClick: false,
+            backdrop: true
+        });
+    }
+
+    function saveQuizProgress() {
+        const progress = {
+            quizId: quizId,
+            studentData: studentData,
+            answers: answers,
+            currentQuestionIndex: currentQuestionIndex,
+            startTime: startTime ? startTime.getTime() : null,
+            totalSeconds: totalSeconds,
+            savedAt: new Date().getTime()
+        };
+        
+        localStorage.setItem(`quizProgress_${quizId}`, JSON.stringify(progress));
+    }
+
+    function loadQuizProgress() {
+        const saved = localStorage.getItem(`quizProgress_${quizId}`);
+        if (!saved) return null;
+        
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.error('Error loading progress:', e);
+            return null;
+        }
+    }
+
+    function restoreQuizFromProgress(progress) {
+        Swal.fire({
+            title: 'Continue Quiz?',
+            html: `We found unfinished quiz progress.<br>Do you want to continue where you left off?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Continue',
+            cancelButtonText: 'Start Over',
+            confirmButtonColor: '#667eea',
+            cancelButtonColor: '#718096'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                studentData = progress.studentData;
+                answers = progress.answers || {};
+                currentQuestionIndex = progress.currentQuestionIndex || 0;
+                
+                if (progress.startTime) {
+                    startTime = new Date(progress.startTime);
+                    if (progress.totalSeconds) {
+                        const timeElapsed = Math.floor((new Date().getTime() - progress.startTime) / 1000);
+                        totalSeconds = Math.max(0, progress.totalSeconds - timeElapsed);
+                    }
+                } else {
+                    startTime = new Date();
+                }
+                
+                document.getElementById('registrationForm').style.display = 'none';
+                document.getElementById('quizInterface').style.display = 'block';
+                
+                startTimer();
+                startQuizStatusCheck();
+                displayCurrentQuestion();
+                updateProgress();
+                
+                showSuccess('Progress restored! Continuing where you left off.');
+            } else {
+                localStorage.removeItem(`quizProgress_${quizId}`);
+                enableRegistrationForm();
+            }
+        });
+    }
+
+    function forceSubmitQuiz() {
+        clearInterval(timerInterval);
+        clearInterval(statusCheckInterval);
+        
+        Swal.fire({
+            title: 'Quiz Ended',
+            text: 'The teacher has ended this quiz. Your answers are being submitted...',
+            icon: 'info',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            timer: 3000
+        });
+        
+        setTimeout(() => {
+            processSubmission();
+        }, 3000);
+    }
+
+    function displayCurrentQuestion() {
+        if (allQuestions.length === 0) {
+            document.getElementById('questionText').textContent = 'No questions available.';
+            document.getElementById('answerOptions').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #718096;">
+                    <p>No questions found in this quiz.</p>
+                    <p>Please contact your teacher.</p>
+                </div>
+            `;
+            document.getElementById('questionPoints').textContent = '0 points';
+            return;
+        }
+
+        const question = allQuestions[currentQuestionIndex];
+        
+        if (!question) {
+            console.error('Question not found at index:', currentQuestionIndex);
+            return;
+        }
+        
+        document.getElementById('questionText').textContent = question.question_text || 'No question text';
+        document.getElementById('questionPoints').textContent = `${question.points || 1} point${(question.points || 1) !== 1 ? 's' : ''}`;
+        document.getElementById('displayQuestionNumber').textContent = currentQuestionIndex + 1;
+        document.getElementById('currentQuestionNumber').textContent = currentQuestionIndex + 1;
+
+        const answerOptions = document.getElementById('answerOptions');
+        answerOptions.innerHTML = '';
+
+        const questionId = question.question_id;
+
+        if (!questionId) {
+            console.error('Question ID missing');
+            return;
+        }
+
+        if (question.question_type === 'true_false') {
+            ['TRUE', 'FALSE'].forEach(option => {
+                const optionDiv = createOptionElement(questionId, option, option);
+                answerOptions.appendChild(optionDiv);
+            });
+        } else if (question.question_type === 'multiple_choice') {
+            if (question.choices && question.choices.length > 0) {
+                question.choices.forEach(choice => {
+                    const optionDiv = createOptionElement(questionId, choice.choice_text, choice.choice_text);
+                    answerOptions.appendChild(optionDiv);
+                });
+            }
+        } else if (question.question_type === 'text' || question.question_type === 'short_answer') {
+            const textarea = document.createElement('textarea');
+            textarea.className = 'text-answer';
+            textarea.placeholder = 'Type your answer here...';
+            textarea.rows = 4;
+            textarea.style.cssText = 'width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; resize: vertical;';
+            
+            textarea.oninput = function() {
+                if (!isQuizPaused && !isQuizStopped) {
+                    answers[questionId] = this.value.trim();
+                    updateProgress();
+                    saveQuizProgress();
+                }
+            };
+            
+            if (answers[questionId]) {
+                textarea.value = answers[questionId];
+            }
+            
+            answerOptions.appendChild(textarea);
+        }
+
+        updateNavigationButtons();
+    }
+
+    function createOptionElement(questionId, value, displayText) {
+        const optionDiv = document.createElement('div');
+        optionDiv.className = 'option-item';
+        
+        if (answers[questionId] === value) {
+            optionDiv.classList.add('selected');
+        }
+        
+        optionDiv.onclick = function() {
+            if (!isQuizPaused && !isQuizStopped) {
+                selectOption(this, questionId, value);
+            }
+        };
+        
+        optionDiv.innerHTML = `
+            <input type="radio" name="q${questionId}" value="${value}" ${answers[questionId] === value ? 'checked' : ''}>
+            <span>${displayText}</span>
+        `;
+        
+        return optionDiv;
+    }
+
+    function selectOption(element, questionId, value) {
+        const siblings = element.parentElement.querySelectorAll('.option-item');
+        siblings.forEach(sibling => {
+            sibling.classList.remove('selected');
+            const radio = sibling.querySelector('input[type="radio"]');
+            if (radio) radio.checked = false;
+        });
+
+        element.classList.add('selected');
+        const radio = element.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
+
+        answers[questionId] = value;
+        updateProgress();
+        saveQuizProgress();
+    }
+
+    function previousQuestion() {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            displayCurrentQuestion();
+            saveQuizProgress();
+        }
+    }
+
+    function nextQuestion() {
+        if (currentQuestionIndex < allQuestions.length - 1) {
+            currentQuestionIndex++;
+            displayCurrentQuestion();
+            saveQuizProgress();
+        }
+    }
+
+    function updateNavigationButtons() {
+        document.getElementById('btnPrevious').style.display = currentQuestionIndex > 0 ? 'block' : 'none';
+        document.getElementById('btnNext').style.display = currentQuestionIndex < allQuestions.length - 1 ? 'block' : 'none';
+        document.getElementById('btnSubmit').style.display = currentQuestionIndex === allQuestions.length - 1 ? 'block' : 'none';
+    }
+
+    function updateProgress() {
+        const progress = allQuestions.length > 0 ? ((currentQuestionIndex + 1) / allQuestions.length) * 100 : 0;
+        document.getElementById('progressFill').style.width = progress + '%';
+    }
+
+    function submitQuiz() {
+        if (isQuizPaused) {
+            Swal.fire('Quiz Paused', 'Cannot submit while quiz is paused', 'warning');
+            return;
+        }
+
+        const totalQuestions = allQuestions.length;
+        const answeredQuestions = Object.keys(answers).length;
+
+        if (answeredQuestions < totalQuestions) {
+            Swal.fire({
+                title: 'Unanswered Questions',
+                html: `You have <strong>${totalQuestions - answeredQuestions}</strong> unanswered questions.<br>Are you sure you want to submit?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e53e3e',
+                cancelButtonColor: '#718096',
+                confirmButtonText: 'Yes, Submit Anyway',
+                cancelButtonText: 'Continue Quiz'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    confirmSubmission();
+                }
+            });
+        } else {
+            confirmSubmission();
+        }
+    }
+
+    function confirmSubmission() {
+        Swal.fire({
+            title: 'Submit Quiz?',
+            text: 'Are you sure you want to submit your answers?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#27ae60',
+            cancelButtonColor: '#718096',
+            confirmButtonText: 'Yes, Submit',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                processSubmission();
+            }
+        });
+    }
+
+    function autoSubmitQuiz() {
+        Swal.fire({
+            title: "Time's Up!",
+            text: 'Your quiz has been submitted automatically',
+            icon: 'info',
+            timer: 3000,
+            showConfirmButton: false
+        });
+        setTimeout(() => {
+            processSubmission();
+        }, 3000);
+    }
+
+// In your student quiz page, update the submit function:
+
+function processSubmission() {
+    clearInterval(timerInterval);
+    clearInterval(statusCheckInterval);
+    endTime = new Date();
+
+    const timeTaken = Math.floor((endTime - startTime) / 1000);
+
+    showLoading('Submitting your answers...');
+
+    localStorage.removeItem(`quizProgress_${quizId}`);
+
+    // Calculate score first
+    const localResults = calculateScore();
+    quizResults = localResults;
+
+    // Submit to server
+    fetch('/api/student/submit_quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            quiz_id: parseInt(quizId),
+            student_id: studentData.lrn,
+            answers: answers,
+            time_taken: timeTaken,
+            score: localResults.score,
+            raw_score: localResults.correct_answers,
+            total_points: localResults.total_questions
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Submit response:', data);
+        
+        // Also notify teacher side
+        if (data.success) {
+            fetch('/api/update_quiz_attempt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    quiz_id: parseInt(quizId),
+                    student_id: studentData.lrn,
+                    score: localResults.score,
+                    time_taken: timeTaken,
+                    raw_score: localResults.correct_answers,
+                    total_points: localResults.total_questions
+                })
+            }).catch(e => console.error('Teacher update error:', e));
+        }
+        
+        hideLoading();
+        
+        if (data.success) {
+            quizResults = data.results || localResults;
+            displayResults(quizResults);
+        } else {
+            displayResults(localResults);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Submit error:', error);
+        displayResults(localResults);
+    });
+}
+
+    function calculateScore() {
+        let correctCount = 0;
+        
+        allQuestions.forEach((question, index) => {
+            const questionId = question.question_id || `question_${index + 1}`;
+            const studentAnswer = answers[questionId] || '';
+            
+            if (isAnswerCorrect(question, studentAnswer)) {
+                correctCount++;
+            }
+        });
+        
+        const totalQuestions = allQuestions.length;
+        const wrongCount = totalQuestions - correctCount;
+        const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+        
+        console.log(`Correct: ${correctCount}/${totalQuestions}`);
+        console.log(`Score: ${score}%`);
+        
+        return {
+            score: score,
+            total_questions: totalQuestions,
+            correct_answers: correctCount,
+            wrong_answers: wrongCount,
+            time_taken: Math.floor((endTime - startTime) / 1000)
+        };
+    }
+
+    function isAnswerCorrect(question, studentAnswer) {
+        if (!question) return false;
+        
+        const studentAns = String(studentAnswer || '').trim().toLowerCase();
+        
+        if (question.correct_answer) {
+            const correctAnswer = String(question.correct_answer || '').trim().toLowerCase();
+            
+            if (studentAns === correctAnswer) {
+                console.log("✅ CORRECT - Matched correct_answer field");
+                return true;
+            }
+        }
+        
+        if (question.question_type === 'multiple_choice' && question.choices) {
+            for (const choice of question.choices) {
+                const choiceText = String(choice.choice_text || '').trim().toLowerCase();
+                
+                if (studentAns === choiceText) {
+                    let isCorrect = false;
+                    
+                    if (choice.is_correct === true || choice.is_correct === 1) {
+                        isCorrect = true;
+                    } else if (typeof choice.is_correct === 'string') {
+                        isCorrect = choice.is_correct.toLowerCase() === 'true' || choice.is_correct === '1';
+                    }
+                    
+                    console.log(`Choice match found! isCorrect: ${isCorrect}`);
+                    return isCorrect;
+                }
+            }
+            
+            console.log("❌ No matching choice found");
+            return false;
+        }
+        
+        return false;
+    }
+
+    function displayResults(results) {
+        document.getElementById('quizInterface').style.display = 'none';
+        document.getElementById('resultsSection').style.display = 'block';
+
+        const score = parseFloat(results.score) || 0;
+        
+        document.getElementById('scoreNumber').textContent = score + '%';
+        document.getElementById('totalQuestionsResult').textContent = results.total_questions || allQuestions.length;
+        document.getElementById('correctAnswers').textContent = results.correct_answers || 0;
+        document.getElementById('wrongAnswers').textContent = results.wrong_answers || 0;
+        document.getElementById('timeTaken').textContent = formatTime(results.time_taken || 0);
+        
+        const scoreCircle = document.getElementById('scoreCircle');
+        if (score >= 90) {
+            scoreCircle.classList.add('high-score');
+            scoreCircle.classList.remove('low-score');
+        } else if (score < 60) {
+            scoreCircle.classList.add('low-score');
+            scoreCircle.classList.remove('high-score');
+        } else {
+            scoreCircle.classList.remove('high-score', 'low-score');
+        }
+
+        if (score >= 90) {
+            showConfetti();
+        }
+    }
+
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+    }
+
+    function closeQuiz() {
+        Swal.fire({
+            title: 'Quiz Completed!',
+            html: `
+                <p>Your quiz has been completed successfully.</p>
+                <p>Thank you for participating!</p>
+            `,
+            icon: 'success',
+            confirmButtonText: 'Close',
+            confirmButtonColor: '#667eea'
+        }).then(() => {
+            window.close();
+        });
+    }
+
+    function showLoading(message) {
+        Swal.close();
+        Swal.fire({
+            title: message,
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+    
+    function hideLoading() {
+        try {
+            Swal.close();
+        } catch (e) {
+            console.log('Error closing loading:', e);
+        }
+        
+        if (Swal.isVisible()) {
+            Swal.close();
+        }
+    }
+
+    function showWarning(message) {
+        Swal.fire({
+            title: message,
+            icon: 'warning',
+            timer: 3000,
+            showConfirmButton: false
+        });
+    }
+
+    function showSuccess(message) {
+        Swal.fire({
+            title: message,
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+
+    function showConfetti() {
+        const confetti = document.createElement('div');
+        confetti.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            font-size: 50px;
+            text-align: center;
+            padding-top: 20%;
+            animation: fadeOut 2s forwards;
+        `;
+        confetti.innerHTML = '🎉';
+        
+        document.body.appendChild(confetti);
+        setTimeout(() => {
+            confetti.remove();
+        }, 2000);
+    }
+    
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTNHS Smart Quiz System - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/Gtnhs logo.png') }}">
+
+
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+
+
+    <div class="container">
+        <div class="form-box" id="login-form">
+            <form action="" method="POST">
+                <div class="logo-container">
+                    <img src="{{ url_for('static', filename='images/Gtnhs logo.png') }}" alt="GTNHS Logo" class="logo">
+                </div>
+                
+                <div class="header-text">
+                    <h1>GTNHS SMART QUIZ SYSTEM</h1>
+                    <p class="subtitle">LAN-Based Interactive Learning Platform</p>
+                </div>
+
+                <div class="login-section">
+                    <h2>Login</h2>
+                    
+                    {% if error %}
+                    <div class="error-message">
+                        <span class="error-icon">⚠️</span>
+                        {{ error }}
+                    </div>
+                    {% endif %}
+
+                    <div class="input-group">
+                        <span class="input-icon">👤</span>
+                        <input type="text" name="username" placeholder="Enter your username" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" name="password" placeholder="Enter your password" required>
+                    </div>
+
+                    <button type="submit" class="login-button">
+                        <span class="button-text">LOGIN</span>
+                        <span class="button-icon">→</span>
+                    </button>
+                </div>
+
+                <div class="footer-info">
+                    <p class="system-info">General Tinio National High School</p>
+                    <p class="version">v2.0</p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Background Elements -->
+        <div class="floating-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
+    </div>
+
+    <script>
+    // Fix for form submission and Enter key
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const loginButton = form.querySelector('.login-button');
+        const inputs = form.querySelectorAll('input');
+        let isSubmitting = false;
+
+        // Proper form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent default submission
+            
+            if (isSubmitting) return;
+            
+            isSubmitting = true;
+            const originalText = loginButton.innerHTML;
+            
+            // Show loading state
+            loginButton.innerHTML = `
+                <div class="loading-spinner"></div>
+                <span>Signing in...</span>
+            `;
+            loginButton.disabled = true;
+
+            // Submit the form programmatically
+            setTimeout(() => {
+                form.submit();
+            }, 300);
+        });
+
+        // Single Enter key handler
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                
+                // Check if we're in an input field
+                const activeElement = document.activeElement;
+                if (activeElement.tagName === 'INPUT') {
+                    // Trigger form submission
+                    form.dispatchEvent(new Event('submit'));
+                }
+            }
+        });
+
+        // Input focus effects with better handling
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('focused');
+            });
+            
+            // Allow Enter key in inputs to submit
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    form.dispatchEvent(new Event('submit'));
+                }
+            });
+        });
+
+        // Auto-focus first input on page load
+        if (inputs.length > 0) {
+            inputs[0].focus();
+        }
+    });
+
+    </script>
+</body>
+</html>

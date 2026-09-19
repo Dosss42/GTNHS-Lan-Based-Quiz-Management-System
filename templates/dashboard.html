@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTNHS Smart Quiz System</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/Gtnhs logo.png') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    
+</head>
+<body>
+
+    <script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+
+    <div class="header">GENERAL TINIO NATIONAL HIGH SCHOOL SMART QUIZ SYSTEM</div>
+
+    <div class="sidebar">
+        <div class="logo-section">
+            <div class="logo-icon">QZ</div>
+            <div class="logo-text">SMART QUIZ</div>
+        </div>
+
+        <form action="/menu_action" method="POST" id="menuForm">
+            <button type="submit" name="menu" value="dashboard" class="menu-item active">
+             <i class="fa-solid fa-chart-bar"></i> DASHBOARD</button>
+            <button type="submit" name="menu" value="create_quiz" class="menu-item">
+             <i class="fa-solid fa-plus"></i>CREATE QUIZ</button>
+            <button type="submit" name="menu" value="session" class="menu-item">
+             <i class="fa-solid fa-display"></i>SESSION</button>
+            <button type="submit" name="menu" value="retrieval" class="menu-item">
+             <i class="fa-regular fa-file-zipper"></i></i>RETRIEVAL</button>
+        </form>
+
+        <button class="menu-item" id="logoutButton">Logout</button>
+    </div>
+
+    <div class="main-content">
+        <div class="search-container">
+            <input type="text" class="search-box" placeholder="Search quizzes, sessions or records...">
+            <button class="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+
+        <div class="overview-card">
+            <h2>OVERVIEW</h2>
+            <div class="overview-description">
+                <p><strong>Smart Quiz System</strong> is an interactive platform designed for quiz creation, 
+                management, and student assessment at General Tinio National High School. The system features 
+                real-time session tracking, QR code-based access, automated scoring.</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalSessions">0</div>
+                    <div class="stat-label">Total Sessions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="activeSessions">0</div>
+                    <div class="stat-label">Active Now</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="totalParticipants">0</div>
+                    <div class="stat-label">Total Participants</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="totalQuizzes">0</div>
+                    <div class="stat-label">Quizzes Created</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cards-grid">
+            <!-- ONGOING SESSIONS -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>📋 ONGOING SESSIONS</h3>
+                </div>
+                <div id="ongoingSessions">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div>Loading sessions...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECENT QUIZZES -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>📱 RECENT QUIZZES</h3>
+  
+                </div>
+                <div id="recentQuizzes">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📱</div>
+                        <div>Loading quizzes...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECENT PARTICIPANTS -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>👥 RECENT PARTICIPANTS</h3>
+
+                </div>
+                <div id="recentParticipants">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <div>Loading participants...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP STUDENTS -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>TOP STUDENTS</h3>
+                <!--    <button class="refresh-btn" onclick="loadTopStudents()">🔄</button> -->
+                </div>
+                <div id="topStudents">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏆</div>
+                        <div>Loading top students...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        <!-- Add this at the end of your HTML, before closing body 
+        <footer class="minimal-footer">
+            <div class="container">
+                <div class="footer-row">
+                    <div class="copyright">
+                        © 2023 GTNHS Smart Quiz System
+                    </div>
+                    <div class="footer-links">
+                        <span>Powered by: General Tinio National High School ICT Department</span>
+                    </div>
+                </div>
+            </div>
+        </footer> -->
+    
+
+
+       
+    </div>
+
+    <!-- QR Code Modal -->
+    <div class="qr-modal" id="qrModal">
+        <div class="qr-content">
+            <h2>Scan to Join Quiz</h2>
+            <div id="qrcode"></div>
+            <p id="quizUrl"></p>
+            <div class="qr-actions">
+                <button class="btn-secondary" onclick="copyQuizUrl()">Copy URL</button>
+                <button class="close-qr-btn" onclick="closeQRModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+
+    
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard page loaded');
+            // Only load dashboard data if we're actually on the dashboard
+            if (isOnDashboardPage()) {
+                loadDashboardData();
+            }
+            setupEventListeners();
+        });
+
+        function isOnDashboardPage() {
+            // Check if current page is dashboard by URL
+            const isDashboard = window.location.pathname === '/dashboard' || 
+                               window.location.pathname === '/';
+            console.log('Is on dashboard page:', isDashboard, 'Path:', window.location.pathname);
+            return isDashboard;
+        }
+
+        function setupEventListeners() {
+            document.getElementById("logoutButton").addEventListener("click", function(e) {
+                e.preventDefault();
+                logout();
+            });
+
+            // COMPLETELY REPLACE menu form handling - use direct navigation
+            document.querySelectorAll('#menuForm .menu-item').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault(); // Prevent form submission
+                    const menu = this.value;
+                    console.log('Menu clicked:', menu);
+                    
+                    // Navigate directly to the pages
+                    if (menu === 'dashboard') {
+                        if (!isOnDashboardPage()) {
+                            window.location.href = '/dashboard';
+                        } else {
+                            // Already on dashboard, just reload data
+                            loadDashboardData();
+                        }
+                    } else if (menu === 'create_quiz') {
+                        window.location.href = '/create_quiz';
+                    } else if (menu === 'session') {
+                        window.location.href = '/session';
+                    } else if (menu === 'retrieval') {
+                        window.location.href = '/retrieval';
+                    }
+                });
+            });
+
+            // Also prevent the form from submitting
+            document.getElementById('menuForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                console.log('Form submission prevented');
+            });
+        }
+
+
+
+// ============================================
+// ENHANCED SEARCH FUNCTIONALITY - SESSION FOCUSED
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    setupEnhancedSearch();
+});
+
+function setupEnhancedSearch() {
+    const searchBox = document.querySelector('.search-box');
+    const searchBtn = document.querySelector('.search-btn');
+    
+    if (!searchBox || !searchBtn) {
+        console.log('Search elements not found');
+        return;
+    }
+    
+    console.log('Enhanced search initialized');
+    
+    // 1. Search on button click
+    searchBtn.addEventListener('click', function() {
+        const searchTerm = searchBox.value.trim();
+        if (searchTerm) {
+            performEnhancedSearch(searchTerm);
+        }
+    });
+    
+    // 2. Search on Enter key - FIXED: Make sure Enter works
+    searchBox.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent form submission if any
+            const searchTerm = this.value.trim();
+            if (searchTerm) {
+                performEnhancedSearch(searchTerm);
+            }
+        }
+    });
+    
+    // 3. Clear on Escape
+    searchBox.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            this.value = '';
+            clearSearchResults();
+        }
+    });
+    
+    // 4. Auto-focus on search box (optional)
+    setTimeout(() => {
+        searchBox.focus();
+    }, 500);
+}
+
+function performEnhancedSearch(searchTerm) {
+    console.log('Enhanced search for:', searchTerm);
+    
+    // Show loading in search button
+    const searchBtn = document.querySelector('.search-btn');
+    searchBtn.innerHTML = '⌛';
+    searchBtn.disabled = true;
+    
+    // Show searching indicator
+    showSearchingIndicator(searchTerm);
+    
+    // Call search API
+    fetch(`/api/search_quizzes?q=${encodeURIComponent(searchTerm)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Search results:', data);
+            
+            if (data.success) {
+                // Display search results BELOW search bar
+                displayEnhancedSearchResults(data.quizzes, searchTerm);
+            } else {
+                showSearchError(data.message || 'Search failed');
+            }
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            showSearchError('Could not connect to server');
+        })
+        .finally(() => {
+            // Restore search button
+            const searchBtn = document.querySelector('.search-btn');
+            searchBtn.innerHTML = '🔍';
+            searchBtn.disabled = false;
+        });
+}
+
+function showSearchingIndicator(searchTerm) {
+    // Create or update searching indicator
+    let indicator = document.querySelector('.searching-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.className = 'searching-indicator';
+        indicator.style.cssText = `
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        `;
+        document.querySelector('.search-container').appendChild(indicator);
+    }
+    
+    indicator.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="loading-spinner-small"></div>
+            <div>
+                <strong>Searching for:</strong> "${searchTerm}"
+                <div style="font-size: 12px; color: #718096;">
+                    Searching quizzes, subjects, sections, and topics...
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function displayEnhancedSearchResults(quizzes, searchTerm) {
+    // Remove searching indicator
+    const indicator = document.querySelector('.searching-indicator');
+    if (indicator) indicator.remove();
+    
+    // Remove previous results
+    const existingResults = document.querySelector('.search-results-container');
+    if (existingResults) existingResults.remove();
+    
+    if (!quizzes || quizzes.length === 0) {
+        showNoResults(searchTerm);
+        return;
+    }
+    
+    // Create results container
+    const resultsContainer = document.createElement('div');
+    resultsContainer.className = 'search-results-container';
+    resultsContainer.style.cssText = `
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-top: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        z-index: 1000;
+        max-height: 400px;
+        overflow-y: auto;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    // Results header
+    const header = document.createElement('div');
+    header.style.cssText = `
+        padding: 15px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #f8fafc;
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    `;
+    header.innerHTML = `
+        <div>
+            <strong>${quizzes.length} result${quizzes.length !== 1 ? 's' : ''} found for "${searchTerm}"</strong>
+            <div style="font-size: 12px; color: #718096; margin-top: 2px;">
+                Click any quiz to go to Session page
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="clearSearchResults()" style="
+                background: #6c757d;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+            ">Clear</button>
+            <button onclick="goToSessionPage('${searchTerm}')" style="
+                background: #4a90e2;
+                color: white;
+                border: none;
+                padding: 6px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+            ">View All in Session</button>
+        </div>
+    `;
+    resultsContainer.appendChild(header);
+    
+    // Results list
+    quizzes.forEach(quiz => {
+        const resultItem = document.createElement('div');
+        resultItem.className = 'search-result-item';
+        resultItem.style.cssText = `
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        `;
+        resultItem.onclick = function() {
+            goToSessionPage(searchTerm, quiz.quiz_id);
+        };
+        
+        // Status badge color
+        let statusColor = '#6c757d'; // draft/default
+        if (quiz.quiz_status === 'active') statusColor = '#28a745';
+        if (quiz.quiz_status === 'paused') statusColor = '#ffc107';
+        if (quiz.quiz_status === 'completed') statusColor = '#17a2b8';
+        
+        resultItem.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px;">
+                        ${highlightMatch(quiz.quiz_title || 'Untitled Quiz', searchTerm)}
+                    </div>
+                    <div style="font-size: 14px; color: #4a5568; margin-bottom: 8px;">
+                        <span style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; margin-right: 8px;">
+                            ${highlightMatch(quiz.subject_name || 'No Subject', searchTerm)}
+                        </span>
+                        <span style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; margin-right: 8px;">
+                            ${highlightMatch(quiz.section_name || 'No Section', searchTerm)} (G${quiz.grade_level || 'N/A'})
+                        </span>
+                    </div>
+                    <div style="font-size: 13px; color: #718096;">
+                        Topic: ${highlightMatch(quiz.topic || 'No Topic', searchTerm)}
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-top: 8px; font-size: 12px; color: #a0aec0;">
+                        <span>Code: ${quiz.quiz_code || 'N/A'}</span>
+                        <span>Created: ${quiz.date_created || 'N/A'}</span>
+                        <span>👥 ${quiz.student_count || 0} students</span>
+                    </div>
+                </div>
+                <div>
+                    <span style="
+                        background: ${statusColor};
+                        color: white;
+                        padding: 4px 10px;
+                        border-radius: 12px;
+                        font-size: 11px;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                    ">
+                        ${(quiz.quiz_status || 'draft').toUpperCase()}
+                    </span>
+                </div>
+            </div>
+        `;
+        
+        // Hover effect
+        resultItem.addEventListener('mouseenter', function() {
+            this.style.background = '#f8fafc';
+        });
+        resultItem.addEventListener('mouseleave', function() {
+            this.style.background = 'white';
+        });
+        
+        resultsContainer.appendChild(resultItem);
+    });
+    
+    // Footer with action
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+        padding: 12px 15px;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        text-align: center;
+        border-radius: 0 0 8px 8px;
+    `;
+    footer.innerHTML = `
+        <button onclick="goToSessionPage('${searchTerm}')" style="
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+        ">
+            📋 View All Results in Session Page
+        </button>
+    `;
+    resultsContainer.appendChild(footer);
+    
+    // Add to DOM
+    document.querySelector('.search-container').appendChild(resultsContainer);
+    
+    // Click outside to close
+    setTimeout(() => {
+        document.addEventListener('click', function closeResults(e) {
+            const searchContainer = document.querySelector('.search-container');
+            const resultsContainer = document.querySelector('.search-results-container');
+            
+            if (resultsContainer && 
+                !searchContainer.contains(e.target) && 
+                !resultsContainer.contains(e.target)) {
+                resultsContainer.remove();
+                document.removeEventListener('click', closeResults);
+            }
+        });
+    }, 100);
+}
+
+function showNoResults(searchTerm) {
+    // Remove searching indicator
+    const indicator = document.querySelector('.searching-indicator');
+    if (indicator) indicator.remove();
+    
+    // Create no results message
+    const noResults = document.createElement('div');
+    noResults.className = 'search-no-results';
+    noResults.style.cssText = `
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 1000;
+        text-align: center;
+        animation: fadeIn 0.3s ease;
+    `;
+    noResults.innerHTML = `
+        <div style="font-size: 48px; margin-bottom: 10px;">🔍</div>
+        <div style="font-weight: bold; margin-bottom: 5px;">No results found</div>
+        <div style="color: #718096; margin-bottom: 15px;">
+            No quizzes found for "<strong>${searchTerm}</strong>"
+        </div>
+        <div style="font-size: 13px; color: #a0aec0; margin-bottom: 15px;">
+            Try searching by:
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+                <span style="background: #e9ecef; padding: 4px 8px; border-radius: 4px;">Quiz Title</span>
+                <span style="background: #e9ecef; padding: 4px 8px; border-radius: 4px;">Subject</span>
+                <span style="background: #e9ecef; padding: 4px 8px; border-radius: 4px;">Section</span>
+                <span style="background: #e9ecef; padding: 4px 8px; border-radius: 4px;">Topic</span>
+            </div>
+        </div>
+        <button onclick="clearSearchResults()" style="
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        ">
+            Clear Search
+        </button>
+    `;
+    
+    document.querySelector('.search-container').appendChild(noResults);
+}
+
+function showSearchError(message) {
+    // Remove searching indicator
+    const indicator = document.querySelector('.searching-indicator');
+    if (indicator) indicator.remove();
+    
+    // Show error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'search-error';
+    errorDiv.style.cssText = `
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fee;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 10px;
+        color: #721c24;
+        z-index: 1000;
+        animation: fadeIn 0.3s ease;
+    `;
+    errorDiv.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 5px;">⚠️ Search Error</div>
+        <div style="margin-bottom: 10px;">${message}</div>
+        <button onclick="clearSearchResults()" style="
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        ">
+            Dismiss
+        </button>
+    `;
+    
+    document.querySelector('.search-container').appendChild(errorDiv);
+}
+
+function clearSearchResults() {
+    // Clear search box
+    const searchBox = document.querySelector('.search-box');
+    if (searchBox) {
+        searchBox.value = '';
+        searchBox.focus();
+    }
+    
+    // Remove all search-related elements
+    const elements = [
+        '.searching-indicator',
+        '.search-results-container',
+        '.search-no-results',
+        '.search-error'
+    ];
+    
+    elements.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) element.remove();
+    });
+}
+
+function goToSessionPage(searchTerm, quizId = null) {
+    // Build URL for session page
+    let url = '/session';
+    
+    if (searchTerm) {
+        url += `?search=${encodeURIComponent(searchTerm)}`;
+        
+        if (quizId) {
+            url += `&highlight=${quizId}`;
+        }
+    } else if (quizId) {
+        url += `?highlight=${quizId}`;
+    }
+    
+    console.log('Navigating to:', url);
+    window.location.href = url;
+}
+
+function highlightMatch(text, searchTerm) {
+    if (!searchTerm || !text) return escapeHtml(text || '');
+    
+    const escapedText = escapeHtml(text);
+    const escapedSearch = escapeHtml(searchTerm);
+    
+    try {
+        const regex = new RegExp(`(${escapedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return escapedText.replace(regex, '<mark class="search-highlight">$1</mark>');
+    } catch (e) {
+        return escapedText;
+    }
+}
+
+// Make functions available globally
+window.clearSearchResults = clearSearchResults;
+window.goToSessionPage = goToSessionPage;
+
+// Add CSS styles
+const searchStyles = document.createElement('style');
+searchStyles.textContent = `
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .search-highlight {
+        background-color: #ffeb3b;
+        padding: 1px 3px;
+        border-radius: 3px;
+        color: #000;
+        font-weight: bold;
+    }
+    
+    .loading-spinner-small {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #4a90e2;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Make search box more responsive */
+    .search-container {
+        position: relative;
+        margin: 20px 0;
+    }
+    
+    .search-box:focus {
+        outline: none;
+        border-color: #4a90e2;
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+    
+    .search-btn {
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+    
+    .search-btn:hover {
+        transform: scale(1.05);
+    }
+    
+    .search-btn:active {
+        transform: scale(0.95);
+    }
+`;
+document.head.appendChild(searchStyles);
+
+
+
+
+
+
+function loadDashboardData() {
+    console.log('Loading dashboard data...');
+    
+    // Test basic API first
+    fetch('/api/test')
+        .then(response => {
+            console.log('Test API response:', response.status, response.statusText);
+            if (!response.ok) {
+                throw new Error(`Test API failed: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(testData => {
+            console.log('Test API success:', testData);
+            
+            // Now try the dashboard API
+            return fetch('/api/dashboard/data');
+        })
+        .then(response => {
+            console.log('Dashboard API response:', response.status, response.statusText);
+            if (!response.ok) {
+                throw new Error(`Dashboard API failed: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Dashboard data received:', data);
+            
+            if (data.success === false) {
+                console.error('API returned error:', data.message);
+                showError('Failed to load data: ' + (data.message || 'Unknown error'));
+                return;
+            }
+            
+            // Data is valid, update the UI
+            updateDashboardUI(data);
+            console.log('Dashboard updated successfully');
+            
+        })
+        .catch(error => {
+            console.error('Error details:', error);
+            console.error('Error message:', error.message);
+            
+            // Check if it's a CORS issue
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                showError('Cannot connect to server. Please check if the server is running.');
+            } else {
+                showError('Error: ' + error.message);
+            }
+            
+            // Fallback: Update with zeros
+            updateDashboardUI({
+                total_sessions: 0,
+                active_sessions: 0,
+                total_participants: 0,
+                total_quizzes: 0,
+                sessions: [],
+                recent_quizzes: [],
+                recent_participants: [],
+                top_students: []
+            });
+        });
+}
+
+
+        function updateDashboardUI(data) {
+            try {
+                // Update statistics - with safe defaults
+                document.getElementById('totalSessions').textContent = data.total_sessions || 0;
+                document.getElementById('activeSessions').textContent = data.active_sessions || 0;
+                document.getElementById('totalParticipants').textContent = data.total_participants || 0;
+                document.getElementById('totalQuizzes').textContent = data.total_quizzes || 0;
+
+                // Update ongoing sessions
+                updateOngoingSessions(data.sessions || []);
+
+                // Update recent quizzes
+                updateRecentQuizzes(data.recent_quizzes || []);
+
+                // Update recent participants
+                updateRecentParticipants(data.recent_participants || []);
+
+                // Update top students
+                updateTopStudents(data.top_students || []);
+            } catch (error) {
+                console.error('Error updating dashboard UI:', error);
+            }
+        }
+
+        function updateOngoingSessions(sessions) {
+            const container = document.getElementById('ongoingSessions');
+            
+            if (sessions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div>No active sessions</div>
+                        <div style="font-size: 12px; color: #a0aec0; margin-top: 5px;">
+                            Start a quiz session to see it here
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            sessions.forEach(session => {
+                html += `
+                    <div class="session-item" onclick="viewSessionDetails(${session.session_id})" style="cursor: pointer;">
+                        <div><strong>${escapeHtml(session.quiz_title || 'Untitled Quiz')}</strong></div>
+                        <div style="font-size: 13px; color: #718096;">
+                            Code: ${escapeHtml(session.session_code || 'N/A')} | ${session.started_at ? formatDate(session.started_at) : 'Not started'}
+                        </div>
+                        <span class="session-status ${getStatusClass(session.session_status)}">
+                            ${escapeHtml((session.session_status || 'unknown').toUpperCase())}
+                        </span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function updateRecentQuizzes(quizzes) {
+            const container = document.getElementById('recentQuizzes');
+            
+            if (quizzes.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📱</div>
+                        <div>No quizzes available</div>
+                        <div style="font-size: 12px; color: #a0aec0; margin-top: 5px;">
+                            Create your first quiz to get started
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            quizzes.forEach(quiz => {
+                html += `
+                    <div class="qr-item" onclick="generateQRCode(${quiz.quiz_id})" style="cursor: pointer;">
+                        <div><strong>${escapeHtml(quiz.quiz_title || 'Untitled Quiz')}</strong></div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            ${escapeHtml(quiz.subject_name || 'No Subject')} - ${escapeHtml(quiz.section_name || 'No Section')}
+                        </div>
+                        <div style="font-size: 12px; color: #a0aec0; margin-top: 5px;">
+                            Created: ${quiz.created_at ? formatDate(quiz.created_at) : 'Recently'}
+                        </div>
+                        <div style="font-size: 11px; color: #b89b6a; margin-top: 3px;">
+                            Click to view QR Code
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function updateRecentParticipants(participants) {
+            const container = document.getElementById('recentParticipants');
+            
+            if (!participants || participants.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <div>No recent participants</div>
+                        <div style="font-size: 12px; color: #a0aec0; margin-top: 5px;">
+                            Students will appear here after joining quizzes
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            participants.forEach(participant => {
+                const studentId = escapeHtml(participant.student_id?.toString() || '');
+                const firstName = escapeHtml(participant.first_name || '');
+                const lastName = escapeHtml(participant.last_name || '');
+                const lrn = escapeHtml(participant.lrn || 'N/A');
+                const gradeLevel = escapeHtml(participant.grade_level?.toString() || 'N/A');
+                const section = escapeHtml(participant.section || 'N/A');
+                
+                html += `
+                    <div class="participant-item" onclick="viewStudentDetails('${studentId}')" style="cursor: pointer;">
+                        <div><strong>${firstName} ${lastName}</strong></div>
+                        <div style="font-size: 13px; color: #718096;">
+                            LRN: ${lrn} | Grade ${gradeLevel}
+                        </div>
+                        <div style="font-size: 12px; color: #a0aec0; margin-top: 5px;">
+                            Section: ${section}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function updateTopStudents(students) {
+            const container = document.getElementById('topStudents');
+            
+            if (!students || students.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏆</div>
+                        <div>No quiz results yet</div>
+                        <div style="font-size: 12px; color: #a0aec0; margin-top: 5px;">
+                            Students will appear here after completing quizzes
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            students.forEach((student, index) => {
+                // Safely handle score - convert to number and provide default
+                const score = parseFloat(student.score) || 0;
+                const rawScore = parseInt(student.raw_score) || 0;
+                const totalPoints = parseInt(student.total_points) || 0;
+                const firstName = escapeHtml(student.first_name || '');
+                const lastName = escapeHtml(student.last_name || '');
+                const quizTitle = escapeHtml(student.quiz_title || 'Unknown Quiz');
+                
+                html += `
+                    <div class="top-student-card" onclick="viewStudentResults(${student.student_id})" style="cursor: pointer; position: relative;">
+                        <div class="student-rank">#${index + 1}</div>
+                        <div class="student-name">${firstName} ${lastName}</div>
+                        <div style="font-size: 13px; opacity: 0.9;">${quizTitle}</div>
+                        <div class="student-score">${score.toFixed(1)}%</div>
+                        <div style="font-size: 12px; opacity: 0.8;">
+                            ${rawScore}/${totalPoints} points
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case 'active': return 'status-active';
+                case 'paused': return 'status-paused';
+                case 'completed': return 'status-completed';
+                default: return 'status-unknown';
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown date';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            } catch (e) {
+                return 'Invalid date';
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return unsafe
+                .toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function viewSessionDetails(sessionId) {
+            window.location.href = `/session`;
+        }
+
+        function generateQRCode(quizId) {
+            showLoading('Generating QR code...');
+            fetch(`/api/generate_qr/${quizId}`)
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        const modal = document.getElementById('qrModal');
+                        const qrContainer = document.getElementById('qrcode');
+                        
+                        // Clear previous QR code
+                        qrContainer.innerHTML = '';
+                        
+                        // Create QR code image
+                        const img = document.createElement('img');
+                        img.src = data.qr_code;
+                        img.style.width = '256px';
+                        img.style.height = '256px';
+                        img.alt = 'Quiz QR Code';
+                        qrContainer.appendChild(img);
+                        
+                        // Show URL
+                        document.getElementById('quizUrl').innerHTML = `
+                            <strong>Quiz URL:</strong><br>
+                            <a href="${data.url}" target="_blank" style="color: #667eea; word-break: break-all;">${data.url}</a>
+                            <br><br>
+                            <small style="color: #7a8a99;">Students can scan this QR code or visit the URL above</small>
+                        `;
+                        
+                        modal.classList.add('active');
+                    } else {
+                        Swal.fire('Error', data.message || 'Failed to generate QR code', 'error');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Error generating QR code:', error);
+                    Swal.fire('Error', 'Failed to generate QR code', 'error');
+                });
+        }
+
+        function copyQuizUrl() {
+            const urlElement = document.querySelector('#quizUrl a');
+            if (urlElement) {
+                const url = urlElement.href;
+                navigator.clipboard.writeText(url).then(() => {
+                    Swal.fire({
+                        title: 'URL Copied!',
+                        text: 'Quiz URL has been copied to clipboard',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                });
+            }
+        }
+
+        function closeQRModal() {
+            document.getElementById('qrModal').classList.remove('active');
+        }
+
+        function viewStudentDetails(studentId) {
+            Swal.fire({
+                title: 'Student Information',
+                html: `Student ID: ${escapeHtml(studentId)}<br>Detailed student view coming soon...`,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function viewStudentResults(studentId) {
+            Swal.fire({
+                title: 'Student Results',
+                html: `Student ID: ${escapeHtml(studentId)}<br>Detailed results view coming soon...`,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        function showLoading(message = 'Loading...') {
+            // Only show loading if we're on dashboard
+            if (isOnDashboardPage()) {
+                Swal.fire({
+                    title: message,
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+            }
+        }
+
+        function hideLoading() {
+            Swal.close();
+        }
+
+        function showError(message) {
+            // Only show error if we're on dashboard
+            if (isOnDashboardPage()) {
+                Swal.fire({
+                    title: 'Error',
+                    text: message,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
+
+
+function loadOngoingSessions() {
+    console.log('Loading ongoing sessions...');
+    fetch('/api/dashboard/sessions')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateOngoingSessions(data.sessions || []);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading sessions:', error);
+        });
+}
+
+
+function loadRecentQuizzes() {
+    console.log('Loading recent quizzes...');
+    fetch('/api/dashboard/recent-quizzes')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateRecentQuizzes(data.quizzes || []);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading quizzes:', error);
+        });
+}
+
+function loadRecentParticipants() {
+    console.log('Loading recent participants...');
+    fetch('/api/dashboard/recent-participants')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateRecentParticipants(data.participants || []);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading participants:', error);
+        });
+}
+
+// Also update your loadDashboardData function to ensure it calls these initially
+function loadDashboardData() {
+    console.log('Loading dashboard data...');
+    
+    showLoading('Loading dashboard...');
+    
+    fetch('/api/dashboard/data')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Dashboard API failed: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Dashboard data received:', data);
+            
+            if (data.success === false) {
+                throw new Error(data.message || 'Failed to load data');
+            }
+            
+            // Update all sections
+            updateDashboardUI(data);
+            
+            // Also update individual sections with the data
+            updateOngoingSessions(data.sessions || []);
+            updateRecentQuizzes(data.recent_quizzes || []);
+            updateRecentParticipants(data.recent_participants || []);
+            updateTopStudents(data.top_students || []);
+            
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Error loading dashboard:', error);
+            hideLoading();
+            
+            // Fallback to individual API calls
+            loadOngoingSessions();
+            loadRecentQuizzes();
+            loadRecentParticipants();
+        });
+}
+
+
+
+        function logout() {
+            Swal.fire({
+                title: "Confirm Logout",
+                text: "Are you sure you want to logout?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                cancelButtonColor: "#3085d6",
+                confirmButtonText: "Logout",
+                cancelButtonText: "Cancel",
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: "Logged Out",
+                        text: "You have been logged out successfully.",
+                        icon: "success",
+                        timer: 1200,
+                        showConfirmButton: false
+                    });
+
+                    setTimeout(() => {
+                        window.location.href = "/process_logout";
+                    }, 1200);
+                }
+            });
+        }
+
+        // Auto-refresh dashboard only when on dashboard page
+        setInterval(() => {
+            if (isOnDashboardPage()) {
+                loadDashboardData();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

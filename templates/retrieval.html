@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTNHS Smart Quiz System</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='retrieval.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/Gtnhs logo.png') }}">
+
+
+    
+   
+</head>
+<body>
+
+    <script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <div class="header">GENERAL TINIO NATIONAL HIGH SCHOOL SMART QUIZ SYSTEM</div>
+
+    <div class="sidebar">
+        <div class="logo-section">
+            <div class="logo-icon">QZ</div>
+            <div class="logo-text">SMART QUIZ</div>
+        </div>
+
+        <form action="/menu_action" method="POST" id="menuForm">
+            <button type="submit" name="menu" value="dashboard" class="menu-item">
+             <i class="fa-solid fa-chart-bar"></i> DASHBOARD</button>
+            <button type="submit" name="menu" value="create_quiz" class="menu-item">
+             <i class="fa-solid fa-plus"></i>CREATE QUIZ</button>
+            <button type="submit" name="menu" value="session" class="menu-item">
+             <i class="fa-solid fa-display"></i>SESSION</button>
+            <button type="submit" name="menu" value="retrieval" class="menu-item active">
+             <i class="fa-regular fa-file-zipper"></i></i>RETRIEVAL</button>
+        </form>
+
+        <button class="menu-item" id="logoutButton">Logout</button>
+    </div>
+
+    <main class="main-content">
+        <div class="content-box">
+            <div class="top-controls">
+                
+                <div class="filter-controls">
+            <!--        <select class="filter-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="archived">Archived</option>
+                        <option value="completed">Completed</option>
+                        <option value="draft">Draft</option>
+                    </select>-->
+                    <button class="btn-trash-bin" id="openTrashBtn">
+                        <span style="font-size: 20px;">🗑️</span>
+                        <span>Trash Bin</span>
+                        <span class="trash-count" id="trashCount">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="page-header">
+                <h2>Archived Quizzes</h2>
+                <p class="page-description">Manage your archived and completed quizzes. Move to trash or restore from trash bin.</p>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalQuizzes">0</div>
+                    <div class="stat-label">Total Quizzes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="archivedCount">0</div>
+                    <div class="stat-label">Archived</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="completedCount">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="draftCount">0</div>
+                    <div class="stat-label">Drafts</div>
+                </div>
+            </div>
+
+            <div class="quiz-container" id="recordsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading archived quizzes...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="trashModal" class="trash-modal">
+        <div class="trash-modal-content">
+            <div class="trash-modal-header">
+                <h2><span style="font-size: 28px;">🗑️</span> Trash Bin</h2>
+                <div class="trash-stats">
+              <!--      <span class="trash-items-count" id="trashItemsCount">0 items</span> -->
+                    <span class="close-modal" id="closeTrashModal">&times;</span>
+                </div>
+            </div>
+            
+            <div class="trash-controls">
+                <input type="text" class="trash-search-box" id="trashSearchBox" placeholder="🔍 Search deleted quizzes...">
+         <!--       <button class="btn-clear-all" onclick="clearAllTrash()" style="background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);;" id="clearAllBtn" disabled>
+                    🗑️ Clear All
+                </button> -->
+            </div>
+            
+            <div id="trashContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading deleted quizzes...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- <button class="btn btn-restore" onclick="retrieveFromTrash(${quiz.quiz_id})">↩️ Restore
+     </button>-->
+
+      <script>
+let archivedQuizzes = [];
+let deletedQuizzes = [];
+
+// Load all quizzes on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Retrieval page loaded");
+    
+    // Add missing HTML elements if needed
+    addMissingElements();
+    
+    // Setup event listeners with null checks
+    setupEventListeners();
+    
+    // Setup trash modal
+    setupTrashModal();
+    
+    // Load archived quizzes
+    loadArchivedQuizzes();
+});
+
+// Add missing HTML elements to prevent null errors
+function addMissingElements() {
+    // Check if searchBox exists, if not add it
+    if (!document.getElementById('searchBox')) {
+        const topControls = document.querySelector('.top-controls');
+        if (topControls) {
+            const searchBox = document.createElement('div');
+            searchBox.className = 'search-box';
+            searchBox.innerHTML = `
+                <input type="text" class="search-input" id="searchBox" placeholder="🔍 Search archived quizzes...">
+            `;
+            topControls.insertBefore(searchBox, topControls.firstChild);
+        }
+    }
+    
+    // Check if statusFilter exists
+    if (!document.getElementById('statusFilter')) {
+        const filterControls = document.querySelector('.filter-controls');
+        if (filterControls) {
+            const filterSelect = document.createElement('select');
+            filterSelect.className = 'filter-select';
+            filterSelect.id = 'statusFilter';
+            filterSelect.innerHTML = `
+                <option value="">All Status</option>
+                <option value="completed">Completed</option>
+                <option value="draft">Draft</option>
+            `;
+            filterControls.insertBefore(filterSelect, filterControls.firstChild);
+        }
+    }
+    
+    // Check if trashItemsCount exists
+    if (!document.getElementById('trashItemsCount')) {
+        const trashStats = document.querySelector('.trash-stats');
+        if (trashStats) {
+            const itemsCount = document.createElement('span');
+            itemsCount.className = 'trash-items-count';
+            itemsCount.id = 'trashItemsCount';
+            itemsCount.textContent = '0 items';
+            trashStats.insertBefore(itemsCount, document.querySelector('.close-modal'));
+        }
+    }
+}
+
+function setupEventListeners() {
+    // Search functionality - with null check
+    const searchBox = document.getElementById('searchBox');
+    if (searchBox) {
+        searchBox.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            filterQuizzes(searchTerm);
+        });
+    } else {
+        console.warn('searchBox element not found');
+    }
+
+    // Trash search functionality - with null check
+    const trashSearchBox = document.getElementById('trashSearchBox');
+    if (trashSearchBox) {
+        trashSearchBox.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            filterDeletedQuizzes(searchTerm);
+        });
+    }
+
+    // Status filter functionality - with null check
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function(e) {
+            filterQuizzesByStatus(e.target.value);
+        });
+    }
+
+    // Logout button - with null check
+    const logoutButton = document.getElementById('logoutButton');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+        });
+    }
+}
+
+// Setup Trash Modal
+function setupTrashModal() {
+    const modal = document.getElementById('trashModal');
+    const btn = document.getElementById('openTrashBtn');
+    const closeBtn = document.getElementById('closeTrashModal');
+
+    if (!modal || !btn || !closeBtn) {
+        console.warn('Trash modal elements not found');
+        return;
+    }
+
+    btn.onclick = function() {
+        modal.style.display = 'block';
+        loadDeletedQuizzes();
+    }
+
+    closeBtn.onclick = function() {
+        modal.style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    }
+}
+
+function loadArchivedQuizzes() {
+    const container = document.getElementById('recordsContainer');
+    if (!container) {
+        console.error('recordsContainer not found');
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            Loading archived quizzes...
+        </div>
+    `;
+    
+    fetch('/api/get_archived_quizzes')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Archived quizzes API response:', data);
+            if (data.success) {
+                archivedQuizzes = data.quizzes || [];
+                
+                // Check if server returns stats object
+                if (data.stats) {
+                    updateStatsFromServer(data.stats);
+                } else {
+                    // Calculate stats from quizzes
+                    updateStatsFromQuizzes(data.quizzes);
+                }
+                
+                // Display quizzes
+                displayArchivedQuizzes(archivedQuizzes);
+            } else {
+                console.error('Failed to load archived quizzes:', data.message);
+                archivedQuizzes = [];
+                displayArchivedQuizzes([]);
+                
+                // Show error message
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-text">Error Loading Quizzes</div>
+                        <p style="color: #e53e3e; margin-top: 10px;">
+                            ${data.message || 'Failed to load archived quizzes'}
+                        </p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading archived quizzes:', error);
+            archivedQuizzes = [];
+            
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <div class="empty-state-text">Connection Error</div>
+                    <p style="color: #e53e3e; margin-top: 10px;">
+                        Failed to connect to server. Please check your internet connection.
+                    </p>
+                </div>
+            `;
+        });
+}
+
+// FIXED: Handle both stats object and quizzes array
+function updateStatsFromServer(stats) {
+    console.log('Updating stats from server:', stats);
+    
+    // Safely update each element
+    const elements = {
+        'totalQuizzes': 'total',
+        'archivedCount': 'total', // All are archived
+        'completedCount': 'completed',
+        'draftCount': 'draft'
+    };
+    
+    for (const [elementId, statKey] of Object.entries(elements)) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = stats[statKey] || 0;
+        }
+    }
+}
+
+// NEW FUNCTION: Calculate stats from quizzes array
+function updateStatsFromQuizzes(quizzes) {
+    console.log('Calculating stats from quizzes:', quizzes?.length || 0);
+    
+    if (!quizzes || !Array.isArray(quizzes)) {
+        console.warn('No quizzes array provided for stats calculation');
+        return;
+    }
+    
+    const total = quizzes.length;
+    let completed = 0;
+    let draft = 0;
+    
+    quizzes.forEach(quiz => {
+        if (quiz.student_count && quiz.student_count > 0) {
+            completed++;
+        } else {
+            draft++;
+        }
+    });
+    
+    const stats = {
+        total: total,
+        completed: completed,
+        draft: draft
+    };
+    
+    updateStatsFromServer(stats);
+}
+
+function displayArchivedQuizzes(quizzes) {
+    const container = document.getElementById('recordsContainer');
+    if (!container) return;
+    
+    if (!quizzes || quizzes.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📚</div>
+                <div class="empty-state-text">No Archived Quizzes</div>
+                <p style="color: #7a8a99; margin-top: 10px;">
+                    Archived quizzes will appear here when you archive them from the Session page.<br>
+                    <small>Use the "Archive" button on quiz cards in the Session page.</small>
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = quizzes.map(quiz => {
+        // Determine type based on student count
+        const quizType = (quiz.student_count || 0) > 0 ? 'completed' : 'draft';
+        const typeText = quizType === 'completed' ? 'COMPLETED' : 'DRAFT';
+        const typeClass = quizType === 'completed' ? 'type-completed' : 'type-draft';
+        const typeIcon = quizType === 'completed' ? '✅' : '📝';
+        
+        // FIXED: Use the correct API endpoint for moving from Archive to Trash
+        return `
+        <div class="record-item" data-quiz-id="${quiz.quiz_id}" data-type="${quizType}">
+            <div class="record-info">
+                <div class="quiz-header">
+                    <div class="quiz-title">${escapeHtml(quiz.quiz_title || 'Untitled Quiz')}</div>
+                    <div class="quiz-code">Code: ${escapeHtml(quiz.quiz_code || 'N/A')}</div>
+                </div>
+                <div class="quiz-details">
+                    <div class="detail-item">
+                        <span class="detail-icon">📚</span>
+                        <span>${escapeHtml(quiz.subject_name || 'No Subject')}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-icon">👥</span>
+                        <span>${escapeHtml(quiz.section_name || 'No Section')}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-icon">🎓</span>
+                        <span>Grade ${escapeHtml(quiz.grade_level || 'N/A')}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-icon">${typeIcon}</span>
+                        <span>${quizType === 'completed' ? 'Completed Session' : 'Draft Quiz'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-icon">👨‍🎓</span>
+                        <span>${quiz.student_count || 0} students</span>
+                    </div>
+                </div>
+                <div class="quiz-status">
+                    <span class="status-badge status-archived">ARCHIVED</span>
+                    <span class="type-badge ${typeClass}">${typeText}</span>
+                    <span class="total-points">${quiz.total_points || 0} points</span>
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-retrieve" onclick="retrieveQuiz(${quiz.quiz_id}, '${quizType}')">
+                    ${quizType === 'completed' ? '📊 Restore' : '📊 Restore'}
+                </button>
+                <!-- FIXED: Changed from moveToTrash() to moveToTrashFromArchive() -->
+                <button class="btn btn-move" onclick="moveToTrashFromArchive(${quiz.quiz_id})">
+                    🗑️ Move to Trash
+                </button>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+// NEW FUNCTION: Move from Archive to Trash (uses correct API endpoint)
+function moveToTrashFromArchive(quizId) {
+    Swal.fire({
+        title: 'Move to Trash Bin?',
+        text: 'This quiz will be moved to trash bin. You can restore it later from trash.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e53e3e',
+        cancelButtonColor: '#95a5a6',
+        confirmButtonText: 'Yes, Move to Trash',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showLoading('Moving to trash bin...');
+            
+            // FIXED: Use the correct endpoint for moving from archive to trash
+            fetch(`/api/archive_to_trash/${quizId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Moved to Trash!',
+                        text: 'Quiz has been moved to trash bin.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Refresh both lists
+                        loadArchivedQuizzes();
+                        // Also update trash modal if open
+                        const modal = document.getElementById('trashModal');
+                        if (modal && modal.style.display === 'block') {
+                            loadDeletedQuizzes();
+                        }
+                    });
+                } else {
+                    Swal.fire('Error', data.message || 'Failed to move quiz to trash', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error moving to trash:', error);
+                Swal.fire('Error', 'Failed to move quiz to trash', 'error');
+            });
+        }
+    });
+}
+
+function retrieveQuiz(quizId, quizType) {
+    const confirmText = quizType === 'completed' 
+        ? 'This will move the completed quiz back to Session page where you can review student results.' 
+        : 'This will move the draft quiz back to Session page where you can edit and start it.';
+    
+    const confirmButton = quizType === 'completed' 
+        ? 'Review Results' 
+        : 'Continue Editing';
+    
+    Swal.fire({
+        title: 'Retrieve Quiz from Archive?',
+        text: confirmText,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#48bb78',
+        cancelButtonColor: '#718096',
+        confirmButtonText: confirmButton,
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showLoading('Retrieving quiz...');
+            
+            // FIXED: Use the correct unarchive endpoint
+            fetch(`/api/unarchive_quiz/${quizId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Retrieved!',
+                        text: `Quiz has been restored to Session page as ${data.restored_status || quizType}`,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        loadArchivedQuizzes(); // Refresh the list
+                    });
+                } else {
+                    Swal.fire('Error', data.message || 'Failed to retrieve quiz', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error retrieving quiz:', error);
+                Swal.fire('Error', 'Failed to retrieve quiz', 'error');
+            });
+        }
+    });
+}
+
+// Load deleted quizzes for trash bin
+function loadDeletedQuizzes() {
+    const container = document.getElementById('trashContainer');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            Loading deleted quizzes...
+        </div>
+    `;
+
+    fetch('/api/get_deleted_quizzes')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Deleted quizzes response:', data);
+            if (data.success) {
+                deletedQuizzes = data.quizzes || [];
+                console.log('Deleted quizzes count:', deletedQuizzes.length);
+                updateTrashStats();
+                displayDeletedQuizzes(deletedQuizzes);
+            } else {
+                console.error('Failed to load deleted quizzes:', data.message);
+                deletedQuizzes = [];
+                displayDeletedQuizzes([]);
+                
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-text">Error Loading Trash</div>
+                        <p style="color: #e53e3e; margin-top: 10px;">
+                            ${data.message || 'Failed to load deleted quizzes'}
+                        </p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading deleted quizzes:', error);
+            deletedQuizzes = [];
+            
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <div class="empty-state-text">Connection Error</div>
+                    <p style="color: #e53e3e; margin-top: 10px;">
+                        Failed to load trash bin. Please check your connection.
+                    </p>
+                </div>
+            `;
+        });
+}
+
+function updateTrashStats() {
+    const trashCount = document.getElementById('trashCount');
+    const trashItemsCount = document.getElementById('trashItemsCount');
+
+    if (trashCount) {
+        trashCount.textContent = deletedQuizzes.length;
+    }
+    
+    if (trashItemsCount) {
+        trashItemsCount.textContent = `${deletedQuizzes.length} item${deletedQuizzes.length !== 1 ? 's' : ''}`;
+    }
+}
+
+// Display deleted quizzes in trash modal
+function displayDeletedQuizzes(quizzes) {
+    const container = document.getElementById('trashContainer');
+    if (!container) return;
+    
+    if (!quizzes || quizzes.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🗑️</div>
+                <div class="empty-state-text">Trash Bin is Empty</div>
+                <p style="color: #7a8a99; margin-top: 10px;">
+                    Deleted quizzes will appear here.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = quizzes.map(quiz => `
+        <div class="record-item deleted-item" data-quiz-id="${quiz.quiz_id}">
+            <div class="record-info">
+                <div class="quiz-header">
+                    <div class="quiz-title">${escapeHtml(quiz.quiz_title || 'Untitled Quiz')}</div>
+                    <div class="quiz-code">Code: ${escapeHtml(quiz.quiz_code || 'N/A')}</div>
+                </div>
+                <div class="quiz-details">
+                    <div class="detail-item">
+                        <span class="detail-icon">📚</span>
+                        <span>${escapeHtml(quiz.subject_name || 'No Subject')}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-icon">👥</span>
+                        <span>${escapeHtml(quiz.section_name || 'No Section')}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-icon">🎓</span>
+                        <span>Grade ${escapeHtml(quiz.grade_level || 'N/A')}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-icon">🗑️</span>
+                        <span>Deleted: ${formatDate(quiz.formatted_deleted_at || quiz.deleted_at) || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-icon">👨‍🎓</span>
+                        <span>${quiz.student_count || 0} students</span>
+                    </div>
+                </div>
+                <div class="deleted-info">
+                    <span class="deleted-time">Deleted ${getTimeAgo(quiz.deleted_at)}</span>
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-delete-permanent" onclick="deletePermanentlyFromTrash(${quiz.quiz_id})">
+                    🗑️ Delete Forever
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Restore from trash function
+function retrieveFromTrash(quizId) {
+    Swal.fire({
+        title: 'Restore from Trash?',
+        text: 'This will restore the quiz from trash bin back to Session page.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#48bb78',
+        cancelButtonColor: '#718096',
+        confirmButtonText: 'Yes, Restore It',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showLoading('Restoring quiz...');
+            
+            // FIXED: Use correct endpoint for restoring from trash
+            fetch(`/api/retrieve_quiz/${quizId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Restored!',
+                        text: 'Quiz has been restored from trash bin',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        loadDeletedQuizzes();
+                        loadArchivedQuizzes(); // Refresh both views
+                    });
+                } else {
+                    Swal.fire('Error', data.message || 'Failed to restore quiz', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error restoring quiz:', error);
+                Swal.fire('Error', 'Failed to restore quiz', 'error');
+            });
+        }
+    });
+}
+
+// Delete permanently from trash - UPDATED with better error handling
+function deletePermanentlyFromTrash(quizId, quizTitle) {
+    Swal.fire({
+        title: 'Delete Everything?',
+        html: `
+            <div style="text-align: left; padding: 10px;">
+                <p><strong>Quiz:</strong> ${escapeHtml(quizTitle)}</p>
+                <p><strong>This will PERMANENTLY delete:</strong></p>
+                <ul>
+                    <li>✓ The quiz itself</li>
+                    <li>✓ All questions and answers</li>
+                    <li>✓ All student attempts</li>
+                    <li>✓ All student registrations for this quiz</li>
+                    <li>✓ Subject (if not used elsewhere)</li>
+                    <li>✓ Section (if not used elsewhere)</li>
+                </ul>
+                <p style="color: #e53e3e; margin-top: 15px;">
+                    <strong>Warning:</strong> This cannot be undone!
+                </p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e53e3e',
+        cancelButtonColor: '#95a5a6',
+        confirmButtonText: 'Yes, Delete Everything',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true,
+        width: '500px'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showLoading('Deleting quiz and all related data...');
+            
+            fetch(`/api/delete_quiz_permanent/${quizId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Completely Deleted!',
+                        html: `
+                            <div style="text-align: left;">
+                                <p>${data.message}</p>
+                                ${data.cleanup_log ? `
+                                    <div style="margin-top: 15px; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                                        <strong>Cleanup performed:</strong>
+                                        <ul style="margin: 5px 0 0 15px;">
+                                            ${data.cleanup_log.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `,
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        loadDeletedQuizzes();
+                    });
+                } else {
+                    Swal.fire('Error', data.message || 'Failed to delete quiz', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error deleting quiz:', error);
+                Swal.fire('Error', 'Failed to delete quiz', 'error');
+            });
+        }
+    });
+}
+
+// Filter functions
+function filterQuizzes(searchTerm) {
+    const filtered = archivedQuizzes.filter(quiz => {
+        const searchFields = [
+            quiz.quiz_title,
+            quiz.subject_name,
+            quiz.section_name,
+            quiz.topic,
+            quiz.quiz_code
+        ].join(' ').toLowerCase();
+        return searchFields.includes(searchTerm.toLowerCase());
+    });
+    displayArchivedQuizzes(filtered);
+}
+
+function filterDeletedQuizzes(searchTerm) {
+    const filtered = deletedQuizzes.filter(quiz => {
+        const searchFields = [
+            quiz.quiz_title,
+            quiz.subject_name,
+            quiz.section_name,
+            quiz.topic,
+            quiz.quiz_code
+        ].join(' ').toLowerCase();
+        return searchFields.includes(searchTerm.toLowerCase());
+    });
+    displayDeletedQuizzes(filtered);
+}
+
+function filterQuizzesByStatus(status) {
+    if (!status) {
+        displayArchivedQuizzes(archivedQuizzes);
+        return;
+    }
+    const filtered = archivedQuizzes.filter(quiz => {
+        const quizType = (quiz.student_count || 0) > 0 ? 'completed' : 'draft';
+        return quizType === status;
+    });
+    displayArchivedQuizzes(filtered);
+}
+
+// Helper functions
+function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown date';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    } catch (e) {
+        return 'Invalid date';
+    }
+}
+
+function getTimeAgo(dateString) {
+    if (!dateString) return 'recently';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return formatDate(dateString);
+}
+
+function showLoading(message = 'Loading...') {
+    Swal.fire({
+        title: message,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+}
+
+function hideLoading() {
+    Swal.close();
+}
+
+function logout() {
+    Swal.fire({
+        title: "Confirm Logout",
+        text: "Are you sure you want to logout?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Logout",
+        cancelButtonText: "Cancel",
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: "Logged Out",
+                text: "You have been logged out successfully.",
+                icon: "success",
+                timer: 1200,
+                showConfirmButton: false
+            });
+            setTimeout(() => {
+                window.location.href = "/process_logout";
+            }, 1200);
+        }
+    });
+}
+
+// Debug function to check API responses
+function debugCheckDatabase() {
+    console.log("=== DEBUG CHECK ===");
+    console.log("Fetching archived quizzes...");
+    
+    fetch('/api/get_archived_quizzes')
+        .then(response => response.json())
+        .then(data => {
+            console.log("Archived Quizzes API Response:", data);
+            console.log(`Success: ${data.success}`);
+            console.log(`Count: ${data.quizzes?.length || 0}`);
+            if (data.quizzes && data.quizzes.length > 0) {
+                console.log("Sample quiz:", {
+                    id: data.quizzes[0].quiz_id,
+                    title: data.quizzes[0].quiz_title,
+                    status: data.quizzes[0].quiz_status,
+                    is_deleted: data.quizzes[0].is_deleted
+                });
+            }
+        })
+        .catch(error => {
+            console.error("Debug fetch error:", error);
+        });
+}
+</script>
+</body>
+</html>

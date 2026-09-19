@@ -1,0 +1,230 @@
+                                    .header {
+                                    position: fixed;
+                                    top: 0;
+                                    left: 0;
+                                    right: 0;
+                                    background: #ffffff70;
+                                    color: black;
+                                    padding: 20px;
+                                    text-align: center;
+                                    font-size: 24px;
+                                    font-weight: bold;
+                                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                                    z-index: 1000;
+                                }
+
+                                    .sidebar {
+                                position: fixed;
+                                left: 0;
+                                top: 67px;
+                                width: 250px;
+                                height: calc(100vh - 64px);
+                                background: #ffffff70;
+                                padding: 20px;
+                                overflow-y: auto;
+                                z-index: 999;
+                            }
+
+                            .logo-section {
+                                text-align: center;
+                                margin-bottom: 30px;
+                                padding-bottom: 20px;
+                                border-bottom: 2px solid #4a5568;
+                            }
+
+                            .logo {
+                                width: 80px;
+                                height: 80px;
+                                background: linear-gradient(135deg, #a2a4b1  0%, #6fffa1 100%);
+                                border-radius: 50%;
+                                margin: 0 auto 10px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 32px;
+                                font-weight: bold;
+                                color: white;
+                            }
+
+                            .logo-text {
+                                color: white;
+                                font-size: 18px;
+                                font-weight: bold;
+                            }
+
+                            .menu-item {
+                                width: 100%;
+                                padding: 15px;
+                                margin-bottom: 10px;
+                                background: #2d3748;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: bold;
+                                transition: all 0.3s;
+                            }
+
+                            .menu-item:hover {
+                                background: #667eea;
+                                transform: translateX(5px);
+                            }
+
+                            #logoutButton {
+                                margin-top: 20px;
+                                background: #e53e3e;
+                            }
+
+                            #logoutButton:hover {
+                                background: #c53030;
+                            }
+
+                            .main-content {
+                                margin-left: 270px;
+                                margin-top: 84px;
+                                padding: 30px;
+                                height: calc(100vh - 84px);
+                                overflow-y: auto;
+                                background: linear-gradient(135deg, #a2a4b1  0%, #6fffa1 100%);
+                            }
+
+                            body {
+                                font-family: 'Belle MT', serif;
+                                background: linear-gradient(135deg, #9099a2 0%, #7a8490 100%);
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                min-height: 100vh;
+                            }
+
+                            @media (max-width: 768px) {
+                                .sidebar {
+                                    width: 100%;
+                                    position: relative;
+                                    height: auto;
+                                }
+
+                                .main-content {
+                                    margin-left: 0;
+                                }
+
+                                .cards-grid {
+                                    grid-template-columns: 1fr;
+                                }
+                            }
+
+                            * {
+                                margin: 0;
+                                padding: 0;
+                                box-sizing: border-box;
+                            }
+
+
+
+/* --- Main Content Layout --- */
+.main-content {
+    flex-grow: 1;
+    padding: 30px;
+    margin-top: 70px;
+    margin-right: 30px;
+    background: linear-gradient(135deg, #a2a4b1  0%, #6fffa1 100%);
+    height: 80vh;
+    overflow-y: auto;
+    width: 100%;
+     border-radius: 12px;
+}
+
+.content-box {
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* --- Search Bar --- */
+.search-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: #f0f0f0;
+    padding: 10px 14px;
+    border-radius: 8px;
+}
+
+.search-icon {
+    font-size: 18px;
+    opacity: 0.6;
+}
+
+.search-box {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 16px;
+}
+
+/* --- Section Title --- */
+.content-box h2 {
+    margin-bottom: 20px;
+    font-size: 22px;
+}
+
+/* --- Record Item Layout --- */
+.record-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafafa;
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #e0e0e0;
+    transition: 0.2s ease;
+}
+
+.record-item:hover {
+    background: #f1f1f1;
+}
+
+/* --- Class Name --- */
+.class-name {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* --- Buttons --- */
+.button-group {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.2s ease;
+    background: #1976D2;
+    color: white;
+}
+
+.btn:hover {
+    background: #0d5cab;
+}
+
+.btn:last-child {
+    background: #d32f2f;
+}
+
+.btn:last-child:hover {
+    background: #b71c1c;
+}
+
+
+
+
+                            

@@ -1,0 +1,2954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTNHS Smart Quiz System</title>
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='session.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/Gtnhs logo.png') }}">
+    
+    <style>
+        /* Additional styles */
+        .student-row-new {
+            animation: highlightPulse 2s ease-in-out;
+            background-color: rgba(52, 152, 219, 0.1) !important;
+            border-left: 4px solid #3498db !important;
+        }
+        
+        @keyframes highlightPulse {
+            0% { background-color: rgba(52, 152, 219, 0.2); }
+            50% { background-color: rgba(52, 152, 219, 0.1); }
+            100% { background-color: rgba(52, 152, 219, 0.05); }
+        }
+        
+        .attempt-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #e8f4fc;
+            color: #2980b9;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .btn-simple-retake {
+            background: #9b59b6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .btn-simple-retake:hover {
+            background: #8e44ad;
+        }
+        
+        .upload-message {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .upload-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .upload-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .upload-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .csv-preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        .csv-preview-table th,
+        .csv-preview-table td {
+            padding: 6px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        
+        .csv-preview-table th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .csv-preview-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        /* Action buttons in session list */
+        .action-buttons-cell {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn-small {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .btn-view-small {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-edit-small {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-duplicate-small {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-archive-small {
+            background: #ea8902ff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <div class="header">GENERAL TINIO NATIONAL HIGH SCHOOL SMART QUIZ SYSTEM</div>
+    
+    <div class="sidebar">
+        <div class="logo-section">
+            <div class="logo-icon">QZ</div>
+            <div class="logo-text">SMART QUIZ</div>
+        </div>
+        <form action="/menu_action" method="POST" id="menuForm">
+            <button type="submit" name="menu" value="dashboard" class="menu-item ">
+             <i class="fa-solid fa-chart-bar"></i> DASHBOARD</button>
+            <button type="submit" name="menu" value="create_quiz" class="menu-item">
+             <i class="fa-solid fa-plus"></i>CREATE QUIZ</button>
+            <button type="submit" name="menu" value="session" class="menu-item active">
+             <i class="fa-solid fa-display"></i>SESSION</button>
+            <button type="submit" name="menu" value="retrieval" class="menu-item">
+             <i class="fa-regular fa-file-zipper"></i>RETRIEVAL</button>
+        </form>
+        <button class="menu-item" id="logoutButton">Logout</button>
+    </div>
+
+    <div class="main-content">
+        <!-- Session List View -->
+        <div class="session-container" id="sessionList">
+            <div class="session-header">
+                <div class="session-title">Quiz Sessions</div>
+                <button class="refresh-btn" onclick="loadQuizzesFromDB()">🔄 Refresh</button>
+            </div>
+
+            <div class="filter-section">
+                <input type="text" class="filter-input" placeholder="Search by title, subject, or topic..." id="searchInput">
+                <select class="filter-input" id="gradeFilter">
+                    <option value="">All Grades</option>
+                    <option value="7">Grade 7</option>
+                    <option value="8">Grade 8</option>
+                    <option value="9">Grade 9</option>
+                    <option value="10">Grade 10</option>
+                </select>
+                <select class="filter-input" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="archived">Archived</option>
+                </select>
+            </div>
+
+            <div class="quiz-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Quiz Title</th>
+                            <th>Subject</th>
+                            <th>Section</th>
+                            <th>Topic</th>
+                            <th>Grade Level</th>
+                            <th>Date Created</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quizTableBody">
+                        <!-- Data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quiz Detail View -->
+        <div class="detail-container" id="quizDetail">
+            <div class="detail-header">
+                <button class="back-btn" onclick="backToList()">← Back to Sessions</button>
+                <div class="action-buttons" id="actionButtonsContainer">
+                    <button class="start-quiz-btn" onclick="startQuiz()" id="startBtn">Start Quiz</button>
+                    <button class="pause-quiz-btn" onclick="pauseQuiz()" id="pauseBtn" style="display:none;">Pause Quiz</button>
+                    <button class="resume-quiz-btn" onclick="resumeQuiz()" id="resumeBtn" style="display:none;">Resume Quiz</button>
+                    <button class="stop-quiz-btn" onclick="stopQuiz()" id="stopBtn" style="display:none;">Stop Quiz</button>
+                    <button class="archive-quiz-btn" onclick="archiveQuiz(currentQuiz.quiz_id)" id="archiveBtn" style="display:none;">Archive Quiz</button>
+                    <button class="action-btn btn-qr" onclick="generateQR(currentQuiz.quiz_id)">Generate QR Code</button>
+                    <button class="btn-simple-retake" onclick="showSimpleRetakeOptions()" id="retakeSettingsBtn">
+                        <i class="fa-solid fa-redo"></i> Retake Settings
+                    </button>
+                </div>
+            </div>
+
+            <div class="quiz-metadata" id="quizMetadata">
+                <!-- Quiz metadata will be populated here -->
+            </div>
+
+            <div class="questions-section">
+                <div class="section-header-detail">EASY Questions</div>
+                <div id="easyQuestions">
+                    <!-- Questions will be populated here -->
+                </div>
+            </div>
+
+            <div class="questions-section">
+                <div class="section-header-detail">MEDIUM Questions</div>
+                <div id="mediumQuestions">
+                    <!-- Questions will be populated here -->
+                </div>
+            </div>
+
+            <div class="questions-section">
+                <div class="section-header-detail">HARD Questions</div>
+                <div id="hardQuestions">
+                    <!-- Questions will be populated here -->
+                </div>
+            </div>
+
+            <!-- Students Section -->
+            <div class="students-section">
+                <div class="section-header-detail">
+                    <span>Registered Students</span>
+                    <span class="student-count" id="studentCount">(0 students)</span>
+                    <div class="student-actions">
+                        <button class="upload-students-btn" onclick="showUploadModal()" title="Add Students">
+                            <i class="fa-solid fa-user-plus"></i> Add Students
+                        </button>
+                        <button class="generate-report-btn" onclick="showSimpleReportModal()" title="Generate Report">
+                            <i class="fa-solid fa-file-export"></i> Generate Report
+                        </button>
+                        <button class="refresh-students-btn" onclick="refreshStudentData()" title="Refresh List">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="uploadStatusMessage" class="upload-message"></div>
+                
+                <table class="student-table">
+                    <thead>
+                        <tr>
+                            <th>LRN</th>
+                            <th>Name</th>
+                            <th>Grade</th>
+                            <th>Section</th>
+                            <th>Status</th>
+                            <th>Attempts</th>
+                            <th>Score</th>
+                            <th>Time Taken</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <!-- Students will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="leaderboard-section">
+                <div class="section-header-detail">Leaderboard</div>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>Score</th>
+                            <th>Time</th>
+                            <th>Attempts</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody">
+                        <!-- Leaderboard will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div class="qr-modal" id="qrModal">
+        <div class="qr-content">
+            <h2>Scan to Join Quiz</h2>
+            <div id="qrcode"></div>
+            <p id="quizUrl"></p>
+            <div class="qr-actions">
+                <button class="btn-secondary" onclick="copyQuizUrl()">Copy URL</button>
+                <button class="close-qr-btn" onclick="closeQRModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Quiz Modal -->
+    <div class="edit-modal" id="editModal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h2><i class="fas fa-edit"></i> Edit Quiz</h2>
+                <button class="close-edit-btn" onclick="closeEditModal()">×</button>
+            </div>
+            <div class="edit-modal-body">
+                <div id="editModalContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIMPLE Upload Students Modal -->
+    <div class="upload-modal" id="uploadModal">
+        <div class="upload-modal-content" style="max-width: 700px;">
+            <div class="upload-modal-header">
+                <h2><i class="fa-solid fa-user-plus"></i> Add Students to Quiz</h2>
+                <button class="close-upload-btn" onclick="closeUploadModal()">×</button>
+            </div>
+            
+            <div class="upload-modal-body">
+                <!-- Quiz Info -->
+                <div class="quiz-info-box" style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #1a3c34;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                        <i class="fa-solid fa-info-circle" style="color: #1a3c34;"></i>
+                        <strong>Current Quiz:</strong>
+                    </div>
+                    <div id="currentQuizInfo" style="font-size: 14px; color: #555;">
+                        Loading quiz info...
+                    </div>
+                </div>
+                
+                <!-- Tabs for CSV vs Manual -->
+                <div class="tabs" style="display: flex; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
+                    <button class="tab-btn active" onclick="showTab('csvTab')" id="csvTabBtn" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 3px solid #1a3c34; font-weight: 600; color: #1a3c34; cursor: pointer;">
+                        <i class="fa-solid fa-file-csv"></i> Import CSV
+                    </button>
+                   
+                    <button class="tab-btn" onclick="showTab('manualTab')" id="manualTabBtn" style="flex: 1; padding: 12px; background: none; border: none; border-bottom: 3px solid transparent; font-weight: 600; color: #666; cursor: pointer;">
+                        <i class="fa-solid fa-user-plus"></i> Manual Entry
+                    </button>
+                </div>
+                
+                <!-- CSV Tab -->
+                <div id="csvTab" class="tab-content" style="display: block;">
+                    <div style="margin-bottom: 20px;">
+                        <p style="margin-bottom: 15px; color: #666;">
+                            Upload a CSV file with student data. File should have columns: LRN, First Name, Last Name, Section
+                        </p>
+                        
+                        <div style="margin-bottom: 15px; text-align: center;">
+                            <a href="javascript:void(0);" onclick="downloadCSVTemplate()" style="color: #1a3c34; text-decoration: underline; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-download"></i> Download Template
+                            </a>
+                        </div>
+                        
+                        <div style="border: 2px dashed #ddd; border-radius: 8px; padding: 30px; text-align: center; background: #fafafa; margin-bottom: 20px;">
+                            <i class="fa-solid fa-file-upload" style="font-size: 48px; color: #1a3c34; margin-bottom: 15px;"></i>
+                            <h4 style="margin: 10px 0; color: #333;">Drop CSV file here or click to browse</h4>
+                            <input type="file" id="csvFileInput" accept=".csv" 
+                                   style="display: none;" onchange="handleCSVFileSelect()">
+                            <button onclick="document.getElementById('csvFileInput').click()" 
+                                    style="padding: 10px 25px; background: #1a3c34; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                <i class="fa-solid fa-folder-open"></i> Browse Files
+                            </button>
+                            <p id="selectedFileName" style="margin-top: 10px; color: #666; font-size: 14px;"></p>
+                        </div>
+                        
+                        <div id="csvPreviewSection" style="display: none;">
+                            <h4 style="margin-bottom: 10px;">Preview (First 5 rows)</h4>
+                            <div id="csvPreviewTable" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px;"></div>
+                            <div style="text-align: center;">
+                                <button onclick="importCSVStudents()" style="padding: 12px 30px; background: #1a3c34; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                    <i class="fa-solid fa-user-plus"></i> Import Students
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Manual Tab -->
+                <div id="manualTab" class="tab-content" style="display: none;">
+                    <div style="margin-bottom: 20px;">
+                        <p style="margin-bottom: 15px; color: #666;">
+                            Add students one by one
+                        </p>
+                        
+                        <div class="form-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
+                                    LRN / Student ID *
+                                </label>
+                                <input type="text" id="manualLRN" placeholder="Enter LRN" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
+                                    Section *
+                                </label>
+                                <input type="text" id="manualSection" placeholder="Enter section" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
+                                    First Name *
+                                </label>
+                                <input type="text" id="manualFirstName" placeholder="Enter first name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
+                                    Last Name *
+                                </label>
+                                <input type="text" id="manualLastName" placeholder="Enter last name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <button onclick="addManualStudent()" style="padding: 12px 30px; background: #1a3c34; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                <i class="fa-solid fa-plus"></i> Add Student
+                            </button>
+                        </div>
+                        
+                        <div id="manualStudentsList" style="margin-top: 20px; display: none;">
+                            <h4 style="margin-bottom: 10px;">Students to Add</h4>
+                            <div id="manualPreviewTable" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px;"></div>
+                            <div style="text-align: center;">
+                                <button onclick="uploadManualStudents()" style="padding: 12px 30px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                    <i class="fa-solid fa-user-plus"></i> Add <span id="manualStudentCount">0</span> Students
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="closeUploadModal()" style="padding: 10px 25px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIMPLE Retake Settings Modal -->
+    <div class="upload-modal" id="retakeModal">
+        <div class="upload-modal-content" style="max-width: 500px;">
+            <div class="upload-modal-header">
+                <h2><i class="fa-solid fa-redo"></i> Retake Settings</h2>
+                <button class="close-upload-btn" onclick="closeRetakeModal()">×</button>
+            </div>
+            
+            <div class="upload-modal-body">
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <i class="fa-solid fa-repeat" style="font-size: 48px; color: #9b59b6; margin-bottom: 15px;"></i>
+                    <h3 style="margin: 10px 0;">Allow Multiple Attempts</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Let students retake the quiz multiple times</p>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
+                            Max Attempts Allowed
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <input type="range" id="maxAttemptsSlider" min="1" max="5" value="1" 
+                                   style="flex: 1;" oninput="updateAttemptValue()">
+                            <span id="attemptValue" style="font-size: 24px; font-weight: bold; color: #9b59b6; min-width: 40px;">1</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px; color: #666;">
+                            <span>1 (Single attempt)</span>
+                            <span>5 (Multiple attempts)</span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
+                            Which Score to Keep
+                        </label>
+                        <select id="retakePolicy" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                            <option value="highest">Highest Score</option>
+                            <option value="latest">Latest Score</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #3498db;">
+                    <p style="margin: 0; font-size: 14px; color: #2c3e50;">
+                        <i class="fa-solid fa-info-circle" style="color: #3498db; margin-right: 8px;"></i>
+                        Students will be allowed to retake the quiz up to the selected number of attempts.
+                    </p>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between;">
+                    <button onclick="closeRetakeModal()" style="padding: 12px 25px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        Cancel
+                    </button>
+                    <button onclick="saveSimpleRetakeSettings()" style="padding: 12px 25px; background: #1a3c34; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        <i class="fa-solid fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simple Report Generation Modal -->
+    <div class="upload-modal" id="reportModal">
+        <div class="upload-modal-content" style="max-width: 500px;">
+            <div class="upload-modal-header">
+                <h2><i class="fa-solid fa-file-export"></i> Generate Student Report</h2>
+                <button class="close-upload-btn" onclick="closeReportModal()">×</button>
+            </div>
+            
+            <div class="upload-modal-body">
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <i class="fa-solid fa-file-excel" style="font-size: 48px; color: #1a3c34; margin-bottom: 15px;"></i>
+                    <h3 style="margin: 10px 0;">Generate Excel Report</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Export all student results to Excel spreadsheet</p>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
+                            Include Students
+                        </label>
+                        <select id="simpleIncludeStudents" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                            <option value="all">All Students</option>
+                            <option value="completed">Completed Only</option>
+                            <option value="in_progress">In Progress Only</option>
+                            <option value="not_started">Not Started Only</option>
+                        </select>
+                    </div>
+                    
+                <!-- In the report modal section, update the Sort By dropdown -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
+                        Sort By
+                    </label>
+                    <select id="simpleSortBy" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="last_name_asc">Last Name (A-Z)</option>
+                        <option value="last_name_desc">Last Name (Z-A)</option>
+                        <option value="first_name_asc">First Name (A-Z)</option>
+                        <option value="first_name_desc">First Name (Z-A)</option>
+                        <option value="score_desc">Score (High to Low)</option>
+                        <option value="score_asc">Score (Low to High)</option>
+                    </select>
+                </div>
+                
+                <div id="simpleReportProgress" style="display: none; text-align: center; margin: 20px 0;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 36px; color: #17a2b8; margin-bottom: 15px;"></i>
+                    <h4>Generating Report...</h4>
+                    <p id="simpleReportStatus">Preparing data...</p>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between;">
+                    <button onclick="closeReportModal()" style="padding: 12px 25px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        Cancel
+                    </button>
+                    <button onclick="generateSimpleReport()" id="generateSimpleReportBtn" style="padding: 12px 25px; background: #1a3c34; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        <i class="fa-solid fa-file-export"></i> Generate Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+<script>
+    // ==========================================
+    // POLLING MANAGER CLASS
+    // ==========================================
+    class QuizPollingManager {
+        constructor(quizId) {
+            this.quizId = quizId;
+            this.pollInterval = null;
+            this.isPolling = false;
+            this.pollDelay = 10000;
+            this.errorCount = 0;
+            this.maxErrors = 3;
+        }
+        
+        startPolling() {
+            if (this.isPolling) {
+                console.log('Polling already active');
+                return;
+            }
+            
+            console.log('Starting quiz polling...');
+            this.isPolling = true;
+            this.poll();
+            
+            this.pollInterval = setInterval(() => {
+                this.poll();
+            }, this.pollDelay);
+        }
+        
+        stopPolling() {
+            if (this.pollInterval) {
+                clearInterval(this.pollInterval);
+                this.pollInterval = null;
+                this.isPolling = false;
+                console.log('Polling stopped');
+            }
+        }
+        
+        async poll() {
+            try {
+                const response = await fetch(`/api/teacher/check_quiz_status/${this.quizId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.errorCount = 0;
+                    
+                    if (currentQuiz && data.status && data.status !== currentQuiz.quiz_status) {
+                        currentQuiz.quiz_status = data.status;
+                        updateQuizControls();
+                        updateQuizMetadata();
+                    }
+                    
+                    if (data.status === 'completed' || data.status === 'archived') {
+                        this.stopPolling();
+                    }
+                } else {
+                    this.handleError();
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+                this.handleError();
+            }
+        }
+        
+        handleError() {
+            this.errorCount++;
+            if (this.errorCount >= this.maxErrors) {
+                this.stopPolling();
+                console.error('Too many polling errors, stopping...');
+            }
+        }
+    }
+
+    // ==========================================
+    // GLOBAL VARIABLES
+    // ==========================================
+    let quizzes = [];
+    let currentQuiz = null;
+    let statusCheckInterval = null;
+    let studentUpdateInterval = null;
+    let currentEditQuizId = null;
+    let csvStudents = [];
+    let manualStudents = [];
+    let pollingManager = null;
+
+    // ==========================================
+    // INITIALIZATION
+    // ==========================================
+    window.onload = function() {
+        loadQuizzesFromDB();
+        
+        // Event listeners
+        document.getElementById('logoutButton')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+        });
+
+        document.getElementById('searchInput')?.addEventListener('input', filterQuizzes);
+        document.getElementById('gradeFilter')?.addEventListener('change', filterQuizzes);
+        document.getElementById('statusFilter')?.addEventListener('change', filterQuizzes);
+        
+        const csvFileInput = document.getElementById('csvFileInput');
+        if (csvFileInput) {
+            csvFileInput.addEventListener('change', handleCSVFileSelect);
+        }
+        
+        // Manual student form - handle Enter key
+        const manualLRN = document.getElementById('manualLRN');
+        const manualFirstName = document.getElementById('manualFirstName');
+        const manualLastName = document.getElementById('manualLastName');
+        
+        [manualLRN, manualFirstName, manualLastName].forEach(input => {
+            if (input) {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addManualStudent();
+                    }
+                });
+            }
+        });
+    };
+
+    // Stop polling when leaving page
+    window.addEventListener('beforeunload', function() {
+        if (pollingManager) {
+            pollingManager.stopPolling();
+        }
+    });
+
+    // Stop/start polling on visibility change
+    document.addEventListener('visibilitychange', function() {
+        if (pollingManager) {
+            if (document.hidden) {
+                pollingManager.stopPolling();
+            } else {
+                pollingManager.startPolling();
+            }
+        }
+    });
+
+    // ==========================================
+    // QUIZ LIST FUNCTIONS
+    // ==========================================
+    function loadQuizzesFromDB() {
+        showLoading('Loading quizzes...');
+        fetch('/api/get_quizzes')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    quizzes = data.quizzes || [];
+                    loadQuizTable();
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                    quizzes = [];
+                    loadQuizTable();
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error loading quizzes:', error);
+                Swal.fire('Error', 'Failed to load quizzes', 'error');
+                quizzes = [];
+                loadQuizTable();
+            });
+    }
+
+    function loadQuizTable() {
+        const tbody = document.getElementById('quizTableBody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+
+        if (quizzes.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 40px; color: #7a8a99;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📚</div>
+                        <div>No quizzes found</div>
+                        <div style="font-size: 14px; margin-top: 10px;">Create your first quiz to get started</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        quizzes.forEach(quiz => {
+            const row = document.createElement('tr');
+            row.style.cursor = 'pointer';
+            row.onclick = () => viewQuizDetail(quiz.quiz_id);
+            row.innerHTML = `
+                <td>
+                    <div class="quiz-title">${escapeHtml(quiz.quiz_title)}</div>
+                    ${quiz.allow_retakes ? '<small style="color: #9b59b6;"><i class="fa-solid fa-redo"></i> Multiple attempts</small>' : ''}
+                </td>
+                <td>${escapeHtml(quiz.subject_name)}</td>
+                <td>${escapeHtml(quiz.section_name)}</td>
+                <td>${escapeHtml(quiz.topic)}</td>
+                <td>Grade ${quiz.grade_level}</td>
+                <td>${quiz.date_created}</td>
+                <td><span class="status-badge status-${quiz.quiz_status}">${quiz.quiz_status.toUpperCase()}</span></td>
+                <td>
+                    <div class="action-buttons-cell">
+                        <button class="action-btn-small btn-view-small" onclick="event.stopPropagation(); viewQuizDetail(${quiz.quiz_id})" title="View Details">
+                            <i class="fa-solid fa-eye"></i> View
+                        </button>
+                        <button class="action-btn-small btn-duplicate-small" onclick="event.stopPropagation(); duplicateQuiz(${quiz.quiz_id})" title="Duplicate Quiz">
+                            <i class="fa-solid fa-clone"></i> Duplicate
+                        </button>
+                        <button class="action-btn-small btn-edit-small" onclick="event.stopPropagation(); openEditQuiz(${quiz.quiz_id})" title="Edit Quiz">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="action-btn-small btn-archive-small" onclick="event.stopPropagation(); archiveQuiz(${quiz.quiz_id})" title="Archive Quiz">
+                            <i class="fa-solid fa-box-archive"></i> Archive
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function filterQuizzes() {
+        const searchInput = document.getElementById('searchInput');
+        const gradeFilter = document.getElementById('gradeFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        
+        if (!searchInput || !gradeFilter || !statusFilter) return;
+        
+        const searchTerm = searchInput.value.toLowerCase();
+        const gradeValue = gradeFilter.value;
+        const statusValue = statusFilter.value;
+
+        const filtered = quizzes.filter(quiz => {
+            const matchesSearch = 
+                (quiz.quiz_title || '').toLowerCase().includes(searchTerm) || 
+                (quiz.subject_name || '').toLowerCase().includes(searchTerm) ||
+                (quiz.section_name || '').toLowerCase().includes(searchTerm) ||
+                (quiz.topic || '').toLowerCase().includes(searchTerm);
+            const matchesGrade = !gradeValue || quiz.grade_level.toString() === gradeValue;
+            const matchesStatus = !statusValue || quiz.quiz_status === statusValue;
+            return matchesSearch && matchesGrade && matchesStatus;
+        });
+
+        const tbody = document.getElementById('quizTableBody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 20px; color: #7a8a99;">
+                        No quizzes match your search criteria
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        filtered.forEach(quiz => {
+            const row = document.createElement('tr');
+            row.style.cursor = 'pointer';
+            row.onclick = () => viewQuizDetail(quiz.quiz_id);
+            row.innerHTML = `
+                <td>
+                    <div class="quiz-title">${escapeHtml(quiz.quiz_title)}</div>
+                    ${quiz.allow_retakes ? '<small style="color: #9b59b6;"><i class="fa-solid fa-redo"></i> Multiple attempts</small>' : ''}
+                </td>
+                <td>${escapeHtml(quiz.subject_name)}</td>
+                <td>${escapeHtml(quiz.section_name)}</td>
+                <td>${escapeHtml(quiz.topic)}</td>
+                <td>Grade ${quiz.grade_level}</td>
+                <td>${quiz.date_created}</td>
+                <td><span class="status-badge status-${quiz.quiz_status}">${quiz.quiz_status.toUpperCase()}</span></td>
+                <td>
+                    <div class="action-buttons-cell">
+                        <button class="action-btn-small btn-view-small" onclick="event.stopPropagation(); viewQuizDetail(${quiz.quiz_id})" title="View Details">
+                            <i class="fa-solid fa-eye"></i> View
+                        </button>
+                        <button class="action-btn-small btn-duplicate-small" onclick="event.stopPropagation(); duplicateQuiz(${quiz.quiz_id})" title="Duplicate Quiz">
+                            <i class="fa-solid fa-clone"></i> Duplicate
+                        </button>
+                        <button class="action-btn-small btn-edit-small" onclick="event.stopPropagation(); openEditQuiz(${quiz.quiz_id})" title="Edit Quiz">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="action-btn-small btn-archive-small" onclick="event.stopPropagation(); archiveQuiz(${quiz.quiz_id})" title="Archive Quiz">
+                            <i class="fa-solid fa-box-archive"></i> Archive
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function duplicateQuiz(quizId) {
+        Swal.fire({
+            title: 'Duplicate Quiz?',
+            text: 'This will create a copy of this quiz.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Duplicate',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading('Duplicating quiz...');
+                fetch(`/api/duplicate_quiz/${quizId}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+                        if (data.success) {
+                            Swal.fire('Success', 'Quiz duplicated!', 'success').then(() => {
+                                loadQuizzesFromDB();
+                            });
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        console.error('Duplicate error:', error);
+                        Swal.fire('Error', 'Failed to duplicate quiz', 'error');
+                    });
+            }
+        });
+    }
+
+    // ==========================================
+    // QUIZ DETAIL FUNCTIONS
+    // ==========================================
+    function viewQuizDetail(quizId) {
+        showLoading('Loading quiz details...');
+        fetch(`/api/get_quiz_detail/${quizId}`)
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (!data.success) {
+                    Swal.fire('Error', data.message, 'error');
+                    return;
+                }
+
+                currentQuiz = {
+                    ...data.quiz,
+                    questions: data.questions || { easy: [], medium: [], hard: [] },
+                    students: data.students || [],
+                    retake_settings: data.retake_settings || { max_attempts: 1, policy: 'highest' }
+                };
+
+                // Show detail view
+                const sessionList = document.getElementById('sessionList');
+                const quizDetail = document.getElementById('quizDetail');
+                
+                if (sessionList) sessionList.style.display = 'none';
+                if (quizDetail) quizDetail.classList.add('active');
+
+                // Clear any previous messages
+                const uploadMsg = document.getElementById('uploadStatusMessage');
+                if (uploadMsg) uploadMsg.style.display = 'none';
+
+                // Update all sections
+                updateQuizMetadata();
+                populateQuestions();
+                populateStudents();
+                populateLeaderboard();
+                updateQuizControls();
+
+                // Start optimized polling
+                if (pollingManager) {
+                    pollingManager.stopPolling();
+                }
+                pollingManager = new QuizPollingManager(quizId);
+                pollingManager.startPolling();
+
+                // Start student updates (less frequent)
+                startStudentUpdates();
+
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                Swal.fire('Error', 'Failed to load quiz details', 'error');
+            });
+    }
+
+    function backToList() {
+        const quizDetail = document.getElementById('quizDetail');
+        const sessionList = document.getElementById('sessionList');
+        
+        if (quizDetail) quizDetail.classList.remove('active');
+        if (sessionList) sessionList.style.display = 'block';
+        
+        // Clear any messages
+        const uploadMsg = document.getElementById('uploadStatusMessage');
+        if (uploadMsg) uploadMsg.style.display = 'none';
+        
+        // Stop polling
+        if (pollingManager) {
+            pollingManager.stopPolling();
+            pollingManager = null;
+        }
+        
+        if (studentUpdateInterval) {
+            clearInterval(studentUpdateInterval);
+            studentUpdateInterval = null;
+        }
+        
+        // Clear current quiz
+        currentQuiz = null;
+        
+        // Reload quizzes
+        loadQuizzesFromDB();
+    }
+
+    function updateQuizMetadata() {
+        const metadata = document.getElementById('quizMetadata');
+        if (!metadata || !currentQuiz) return;
+        
+        let retakeInfo = '';
+        if (currentQuiz.retake_settings && currentQuiz.retake_settings.max_attempts > 1) {
+            retakeInfo = `
+                <div class="metadata-item">
+                    <div class="metadata-label">Max Attempts</div>
+                    <div class="metadata-value">
+                        ${currentQuiz.retake_settings.max_attempts}
+                        <small style="color: #666; margin-left: 5px;">(${currentQuiz.retake_settings.policy} score)</small>
+                    </div>
+                </div>
+            `;
+        }
+        
+        metadata.innerHTML = `
+            <div class="metadata-grid">
+                <div class="metadata-item">
+                    <div class="metadata-label">Quiz Title</div>
+                    <div class="metadata-value">${escapeHtml(currentQuiz.quiz_title)}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Quiz Code</div>
+                    <div class="metadata-value">${escapeHtml(currentQuiz.quiz_code)}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Subject</div>
+                    <div class="metadata-value">${escapeHtml(currentQuiz.subject_name)}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Section</div>
+                    <div class="metadata-value">${escapeHtml(currentQuiz.section_name)}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Topic</div>
+                    <div class="metadata-value">${escapeHtml(currentQuiz.topic)}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Grade Level</div>
+                    <div class="metadata-value">Grade ${currentQuiz.grade_level}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Date Created</div>
+                    <div class="metadata-value">${currentQuiz.date_created}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Duration</div>
+                    <div class="metadata-value">${currentQuiz.duration_minutes} minutes</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Total Points</div>
+                    <div class="metadata-value">${currentQuiz.total_points} points</div>
+                </div>
+                ${retakeInfo}
+                <div class="metadata-item">
+                    <div class="metadata-label">Status</div>
+                    <div class="metadata-value"><span class="status-badge status-${currentQuiz.quiz_status}">${currentQuiz.quiz_status.toUpperCase()}</span></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function populateQuestions() {
+        if (!currentQuiz) return;
+        
+        // Easy questions
+        const easyContainer = document.getElementById('easyQuestions');
+        if (easyContainer) {
+            easyContainer.innerHTML = '';
+            if (currentQuiz.questions.easy && currentQuiz.questions.easy.length > 0) {
+                currentQuiz.questions.easy.forEach((q, index) => {
+                    easyContainer.innerHTML += createQuestionHTML(q, index + 1);
+                });
+            } else {
+                easyContainer.innerHTML = '<div class="no-questions">No easy questions</div>';
+            }
+        }
+
+        // Medium questions
+        const mediumContainer = document.getElementById('mediumQuestions');
+        if (mediumContainer) {
+            mediumContainer.innerHTML = '';
+            if (currentQuiz.questions.medium && currentQuiz.questions.medium.length > 0) {
+                currentQuiz.questions.medium.forEach((q, index) => {
+                    mediumContainer.innerHTML += createQuestionHTML(q, index + 1);
+                });
+            } else {
+                mediumContainer.innerHTML = '<div class="no-questions">No medium questions</div>';
+            }
+        }
+
+        // Hard questions
+        const hardContainer = document.getElementById('hardQuestions');
+        if (hardContainer) {
+            hardContainer.innerHTML = '';
+            if (currentQuiz.questions.hard && currentQuiz.questions.hard.length > 0) {
+                currentQuiz.questions.hard.forEach((q, index) => {
+                    hardContainer.innerHTML += createQuestionHTML(q, index + 1);
+                });
+            } else {
+                hardContainer.innerHTML = '<div class="no-questions">No hard questions</div>';
+            }
+        }
+    }
+
+    function createQuestionHTML(q, number) {
+        let choicesHTML = '';
+        if (q.question_type === 'multiple_choice' && q.choices && q.choices.length > 0) {
+            choicesHTML = `
+                <div class="choices-list">
+                    <strong>Choices:</strong>
+                    <ul>
+                        ${q.choices.map(c => `
+                            <li class="${c.is_correct ? 'correct-choice' : ''}">
+                                ${escapeHtml(c.choice_text || '')}
+                                ${c.is_correct ? ' ✓' : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="question-detail">
+                <div class="question-header">
+                    <span class="question-number">Q${number}</span>
+                    <span class="question-points">${q.points || 1} point${(q.points || 1) !== 1 ? 's' : ''}</span>
+                </div>
+                <div class="question-text">${escapeHtml(q.question_text || '')}</div>
+                ${choicesHTML}
+                <div class="answer-text"><strong>Answer:</strong> ${escapeHtml(q.correct_answer || '')}</div>
+            </div>
+        `;
+    }
+
+    function populateStudents() {
+        const tbody = document.getElementById('studentTableBody');
+        const studentCount = document.getElementById('studentCount');
+        
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (!currentQuiz || !currentQuiz.students || currentQuiz.students.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 40px; color: #7a8a99;">
+                        <div style="font-size: 36px; margin-bottom: 10px;">👨‍🎓</div>
+                        <div>No students registered yet</div>
+                        <div style="font-size: 14px; margin-top: 10px;">
+                            <button onclick="showUploadModal()" style="
+                                background: #1a3c34;
+                                color: white;
+                                border: none;
+                                padding: 8px 16px;
+                                border-radius: 4px;
+                                cursor: pointer;
+                                margin-top: 10px;
+                            ">
+                                <i class="fa-solid fa-user-plus"></i> Add Students
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            `;
+            if (studentCount) studentCount.textContent = '(0 students)';
+            return;
+        }
+
+        // Create sorted copy of students (A-Z by last name, then first name)
+        const sortedStudents = [...currentQuiz.students].sort((a, b) => {
+            const aLastName = (a.last_name || '').toLowerCase();
+            const bLastName = (b.last_name || '').toLowerCase();
+            const aFirstName = (a.first_name || '').toLowerCase();
+            const bFirstName = (b.first_name || '').toLowerCase();
+            
+            // Compare last names first
+            if (aLastName < bLastName) return -1;
+            if (aLastName > bLastName) return 1;
+            
+            // If last names are equal, compare first names
+            if (aFirstName < bFirstName) return -1;
+            if (aFirstName > bFirstName) return 1;
+            
+            return 0;
+        });
+
+        if (studentCount) {
+            studentCount.textContent = `(${sortedStudents.length} student${sortedStudents.length !== 1 ? 's' : ''})`;
+        }
+
+        sortedStudents.forEach((student, index) => {
+            const row = document.createElement('tr');
+            
+            // Get student data with proper fallbacks
+            const lrn = student.lrn || student.student_id || `ID-${index + 1}`;
+            const firstName = student.first_name || '';
+            const lastName = student.last_name || '';
+            const fullName = `${firstName} ${lastName}`.trim() || `Student ${index + 1}`;
+            const grade = student.grade_level || currentQuiz.grade_level || 7;
+            const section = student.section || currentQuiz.section_name || '';
+            
+            // Status
+            let statusDisplay = 'NOT STARTED';
+            let statusClass = 'status-not_started';
+            let attemptStatus = student.attempt_status || 'not_started';
+            
+            if (attemptStatus === 'completed') {
+                statusDisplay = 'COMPLETED';
+                statusClass = 'status-completed';
+            } else if (attemptStatus === 'in_progress') {
+                statusDisplay = 'IN PROGRESS';
+                statusClass = 'status-in_progress';
+            }
+            
+            // Score and time
+            const score = student.score !== undefined && student.score !== null ? 
+                parseFloat(student.score).toFixed(2) : '0.00';
+            const rawScore = student.raw_score || 0;
+            const totalPoints = student.total_points || 
+                currentQuiz.total_points || 
+                (currentQuiz.questions ? 
+                    (currentQuiz.questions.easy.length + currentQuiz.questions.medium.length + currentQuiz.questions.hard.length) : 
+                    0);
+            const timeTaken = student.time_taken_seconds ? formatTime(student.time_taken_seconds) : 'N/A';
+            const attempts = student.attempt_count || student.attempt_number || 1;
+            const maxAttempts = currentQuiz.retake_settings?.max_attempts || 1;
+            
+            row.innerHTML = `
+                <td>${escapeHtml(lrn)}</td>
+                <td>${escapeHtml(fullName)}</td>
+                <td>Grade ${grade}</td>
+                <td>${escapeHtml(section)}</td>
+                <td><span class="status-badge ${statusClass}">${statusDisplay}</span></td>
+                <td>
+                    <div class="attempt-badge">${attempts}/${maxAttempts}</div>
+                </td>
+                <td>
+                    <div class="score-display">${score}%</div>
+                    <div class="score-detail">${rawScore}/${totalPoints}</div>
+                </td>
+                <td>${timeTaken}</td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+    }
+
+    function populateLeaderboard() {
+        const tbody = document.getElementById('leaderboardBody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+
+        if (!currentQuiz || !currentQuiz.students || currentQuiz.students.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #7a8a99;">No students yet</td></tr>';
+            return;
+        }
+
+        // Get completed students with scores
+        const completed = currentQuiz.students
+            .filter(s => s.attempt_status === 'completed' && s.score !== null)
+            .sort((a, b) => (b.score || 0) - (a.score || 0))
+            .slice(0, 10);
+
+        if (completed.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #7a8a99;">No completed quizzes yet</td></tr>';
+            return;
+        }
+
+        completed.forEach((student, index) => {
+            const rank = index + 1;
+            const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
+            const timeTaken = student.time_taken_seconds ? formatTime(student.time_taken_seconds) : 'N/A';
+            const attempts = student.attempt_count || 1;
+            
+            let studentName = `${escapeHtml(student.first_name || '')} ${escapeHtml(student.last_name || '')}`.trim();
+            if (!studentName) studentName = `Student ${student.student_id}`;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><span class="rank-badge ${rankClass}">${rank}</span></td>
+                <td>${studentName}</td>
+                <td>
+                    <div class="score-display">${student.score}%</div>
+                    <div class="score-detail">${student.raw_score || 0}/${student.total_points || 0}</div>
+                </td>
+                <td>${timeTaken}</td>
+                <td><div class="attempt-badge">${attempts}</div></td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function formatTime(seconds) {
+        if (!seconds) return 'N/A';
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    function updateQuizControls() {
+        if (!currentQuiz) return;
+        
+        // Get button elements
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const archiveBtn = document.getElementById('archiveBtn');
+        const retakeBtn = document.getElementById('retakeSettingsBtn');
+
+        // Reset all buttons
+        if (startBtn) startBtn.style.display = 'none';
+        if (pauseBtn) pauseBtn.style.display = 'none';
+        if (resumeBtn) resumeBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'none';
+        if (archiveBtn) archiveBtn.style.display = 'none';
+        if (retakeBtn) retakeBtn.style.display = 'inline-block';
+
+        // Show appropriate buttons based on status
+        switch(currentQuiz.quiz_status) {
+            case 'draft':
+                if (startBtn) startBtn.style.display = 'inline-block';
+                break;
+            case 'active':
+                if (pauseBtn) pauseBtn.style.display = 'inline-block';
+                if (stopBtn) stopBtn.style.display = 'inline-block';
+                break;
+            case 'paused':
+                if (resumeBtn) resumeBtn.style.display = 'inline-block';
+                if (stopBtn) stopBtn.style.display = 'inline-block';
+                break;
+            case 'completed':
+            case 'archived':
+                if (archiveBtn) archiveBtn.style.display = 'inline-block';
+                break;
+        }
+    }
+
+    // ==========================================
+    // STUDENT ADDING FUNCTIONS
+    // ==========================================
+    function showUploadModal() {
+        if (!currentQuiz) {
+            Swal.fire('Error', 'Please select a quiz first', 'error');
+            return;
+        }
+
+        // Update quiz info
+        const quizInfo = document.getElementById('currentQuizInfo');
+        if (quizInfo) {
+            quizInfo.innerHTML = `
+                <strong>${escapeHtml(currentQuiz.quiz_title)}</strong><br>
+                Grade ${currentQuiz.grade_level} | ${escapeHtml(currentQuiz.section_name || 'All Sections')}
+            `;
+        }
+
+        // Reset form
+        resetUploadForm();
+        
+        // Show modal
+        const modal = document.getElementById('uploadModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    function resetUploadForm() {
+        // Clear CSV
+        csvStudents = [];
+        const fileInput = document.getElementById('csvFileInput');
+        if (fileInput) fileInput.value = '';
+        const fileName = document.getElementById('selectedFileName');
+        if (fileName) fileName.textContent = '';
+        const csvPreview = document.getElementById('csvPreviewSection');
+        if (csvPreview) csvPreview.style.display = 'none';
+        const csvTable = document.getElementById('csvPreviewTable');
+        if (csvTable) csvTable.innerHTML = '';
+        
+        // Clear manual
+        manualStudents = [];
+        const lrnInput = document.getElementById('manualLRN');
+        if (lrnInput) lrnInput.value = '';
+        const firstNameInput = document.getElementById('manualFirstName');
+        if (firstNameInput) firstNameInput.value = '';
+        const lastNameInput = document.getElementById('manualLastName');
+        if (lastNameInput) lastNameInput.value = '';
+        const sectionInput = document.getElementById('manualSection');
+        if (sectionInput) sectionInput.value = currentQuiz?.section_name || '';
+        const manualList = document.getElementById('manualStudentsList');
+        if (manualList) manualList.style.display = 'none';
+        const manualTable = document.getElementById('manualPreviewTable');
+        if (manualTable) manualTable.innerHTML = '';
+        const countSpan = document.getElementById('manualStudentCount');
+        if (countSpan) countSpan.textContent = '0';
+        
+        // Hide message
+        const uploadMsg = document.getElementById('uploadStatusMessage');
+        if (uploadMsg) uploadMsg.style.display = 'none';
+        
+        // Reset to CSV tab
+        showTab('csvTab');
+    }
+
+    function showTab(tabName) {
+        const csvTabBtn = document.getElementById('csvTabBtn');
+        const manualTabBtn = document.getElementById('manualTabBtn');
+        const csvTab = document.getElementById('csvTab');
+        const manualTab = document.getElementById('manualTab');
+
+        if (!csvTabBtn || !manualTabBtn || !csvTab || !manualTab) return;
+
+        // Reset button styles
+        csvTabBtn.classList.remove('active');
+        manualTabBtn.classList.remove('active');
+        csvTabBtn.style.cssText = 'flex: 1; padding: 12px; background: none; border: none; border-bottom: 3px solid transparent; font-weight: 600; color: #666; cursor: pointer;';
+        manualTabBtn.style.cssText = 'flex: 1; padding: 12px; background: none; border: none; border-bottom: 3px solid transparent; font-weight: 600; color: #666; cursor: pointer;';
+        
+        // Hide all tabs
+        csvTab.style.display = 'none';
+        manualTab.style.display = 'none';
+        
+        // Show selected tab
+        if (tabName === 'csvTab') {
+            csvTab.style.display = 'block';
+            csvTabBtn.classList.add('active');
+            csvTabBtn.style.borderBottom = '3px solid #1a3c34';
+            csvTabBtn.style.color = '#1a3c34';
+        } else {
+            manualTab.style.display = 'block';
+            manualTabBtn.classList.add('active');
+            manualTabBtn.style.borderBottom = '3px solid #1a3c34';
+            manualTabBtn.style.color = '#1a3c34';
+        }
+    }
+
+    function downloadCSVTemplate() {
+        const csvContent = "LRN,First Name,Last Name,Section\n123456789,John,Doe,Section A\n987654321,Jane,Smith,Section B\n555555555,Mike,Johnson,Section A";
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "students_template.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+    function handleCSVFileSelect() {
+        const fileInput = document.getElementById('csvFileInput');
+        if (!fileInput || !fileInput.files[0]) return;
+        
+        const file = fileInput.files[0];
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const csvText = e.target.result;
+                const lines = csvText.split('\n').filter(line => line.trim() !== '');
+                
+                if (lines.length < 2) {
+                    showUploadMessage('CSV file is empty or has no data rows', 'error');
+                    return;
+                }
+                
+                // Parse CSV - simple format: LRN,First Name,Last Name,Section
+                csvStudents = [];
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                
+                console.log('CSV Headers:', headers);
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const cells = lines[i].split(',').map(c => c.trim());
+                    
+                    // Find indices
+                    const lrnIndex = headers.findIndex(h => h.includes('lrn') || h.includes('id'));
+                    const firstNameIndex = headers.findIndex(h => h.includes('first') || h.includes('name'));
+                    const lastNameIndex = headers.findIndex(h => h.includes('last') || h.includes('surname'));
+                    const sectionIndex = headers.findIndex(h => h.includes('section') || h.includes('class'));
+                    
+                    // Extract data
+                    const lrn = lrnIndex >= 0 ? cells[lrnIndex] : cells[0];
+                    const firstName = firstNameIndex >= 0 ? cells[firstNameIndex] : cells[1];
+                    const lastName = lastNameIndex >= 0 ? cells[lastNameIndex] : cells[2];
+                    const section = sectionIndex >= 0 ? cells[sectionIndex] : (currentQuiz.section_name || '');
+                    
+                    if (lrn && firstName && lastName) {
+                        csvStudents.push({
+                            lrn: lrn,
+                            first_name: firstName,
+                            last_name: lastName,
+                            section: section,
+                            grade_level: currentQuiz.grade_level
+                        });
+                    }
+                }
+                
+                console.log('Parsed students:', csvStudents);
+                
+                if (csvStudents.length === 0) {
+                    showUploadMessage('No valid student data found in CSV', 'error');
+                    return;
+                }
+                
+                showUploadMessage(`Found ${csvStudents.length} students in CSV`, 'success');
+                showCSVPreview(csvStudents);
+                
+            } catch (error) {
+                console.error('Error parsing CSV:', error);
+                showUploadMessage('Error parsing CSV. Please check the format.', 'error');
+            }
+        };
+        
+        reader.readAsText(file, 'UTF-8');
+    }
+
+    function showCSVPreview(students) {
+        const previewTable = document.getElementById('csvPreviewTable');
+        const previewSection = document.getElementById('csvPreviewSection');
+        
+        if (!previewTable || !previewSection) return;
+        
+        let html = '<table class="csv-preview-table">';
+        html += '<thead><tr><th>LRN</th><th>First Name</th><th>Last Name</th><th>Section</th></tr></thead><tbody>';
+        
+        // Show first 5 students only
+        const previewCount = Math.min(students.length, 5);
+        for (let i = 0; i < previewCount; i++) {
+            const s = students[i];
+            html += `<tr>
+                <td>${escapeHtml(s.lrn)}</td>
+                <td>${escapeHtml(s.first_name)}</td>
+                <td>${escapeHtml(s.last_name)}</td>
+                <td>${escapeHtml(s.section)}</td>
+            </tr>`;
+        }
+        
+        if (students.length > 5) {
+            html += `<tr><td colspan="4" style="text-align: center; font-style: italic;">... and ${students.length - 5} more students</td></tr>`;
+        }
+        
+        html += '</tbody></table>';
+        previewTable.innerHTML = html;
+        previewSection.style.display = 'block';
+    }
+
+    function importCSVStudents() {
+        if (csvStudents.length === 0) {
+            alert('No students in CSV!');
+            return;
+        }
+        uploadStudents(csvStudents);
+    }
+
+    function addManualStudent() {
+        console.log('=== MANUAL ADD STUDENT FUNCTION CALLED ===');
+        
+        // 1. Get input values - SIMPLE WAY
+        const lrnInput = document.getElementById('manualLRN');
+        const firstNameInput = document.getElementById('manualFirstName');
+        const lastNameInput = document.getElementById('manualLastName');
+        
+        console.log('Input elements found:', {
+            lrn: !!lrnInput,
+            firstName: !!firstNameInput,
+            lastName: !!lastNameInput
+        });
+        
+        if (!lrnInput || !firstNameInput || !lastNameInput) {
+            alert('Error: Form inputs not found!');
+            return;
+        }
+        
+        const lrn = lrnInput.value.trim();
+        const firstName = firstNameInput.value.trim();
+        const lastName = lastNameInput.value.trim();
+        
+        console.log('Input values:', { lrn, firstName, lastName });
+        
+        // 2. Validation - SIMPLE
+        if (!lrn) {
+            alert('Please enter LRN!');
+            lrnInput.focus();
+            return;
+        }
+        if (!firstName) {
+            alert('Please enter first name!');
+            firstNameInput.focus();
+            return;
+        }
+        if (!lastName) {
+            alert('Please enter last name!');
+            lastNameInput.focus();
+            return;
+        }
+        
+        // 3. Create student object - SIMPLE
+        const newStudent = {
+            lrn: lrn,
+            first_name: firstName,
+            last_name: lastName,
+            section: currentQuiz?.section_name || 'Default',
+            grade_level: currentQuiz?.grade_level || 7
+        };
+        
+        console.log('New student object:', newStudent);
+        
+        // 4. Add to array
+        if (!manualStudents) {
+            manualStudents = []; // Initialize if not exists
+        }
+        
+        manualStudents.push(newStudent);
+        console.log('Added to manualStudents array. Total:', manualStudents.length);
+        console.log('Array contents:', manualStudents);
+        
+        // 5. Clear form
+        lrnInput.value = '';
+        firstNameInput.value = '';
+        lastNameInput.value = '';
+        
+        // 6. Focus back to LRN
+        lrnInput.focus();
+        
+        // 7. Show preview
+        showManualPreview();
+        
+        // 8. Show success message
+        showSimpleMessage(`✅ Added: ${firstName} ${lastName}`);
+    }
+
+    function showManualPreview() {
+        console.log('Showing manual preview...');
+        
+        const previewDiv = document.getElementById('manualStudentsList');
+        const countSpan = document.getElementById('manualStudentCount');
+        
+        if (!previewDiv || !countSpan) {
+            console.error('Preview elements missing!');
+            return;
+        }
+        
+        if (manualStudents.length === 0) {
+            previewDiv.style.display = 'none';
+            return;
+        }
+        
+        // Update count
+        countSpan.textContent = manualStudents.length;
+        
+        // Create simple table
+        let html = '<div style="border: 1px solid #ddd; border-radius: 4px; overflow: hidden;">';
+        html += '<table style="width: 100%; border-collapse: collapse;">';
+        html += '<thead><tr style="background: #f5f5f5;">';
+        html += '<th style="padding: 8px; border-bottom: 1px solid #ddd;">LRN</th>';
+        html += '<th style="padding: 8px; border-bottom: 1px solid #ddd;">Name</th>';
+        html += '<th style="padding: 8px; border-bottom: 1px solid #ddd;">Action</th>';
+        html += '</tr></thead><tbody>';
+        
+        manualStudents.forEach((student, index) => {
+            html += `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">${student.lrn}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">
+                        ${student.first_name} ${student.last_name}
+                    </td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">
+                        <button onclick="removeStudent(${index})" 
+                                style="background:#e74c3c;color:white;border:none;padding:4px 8px;border-radius:3px;cursor:pointer;font-size:12px;">
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        
+        // Add upload button if not exists
+        if (!document.getElementById('uploadManualBtn')) {
+            html += `
+                <div style="margin-top: 15px; text-align: center;">
+                    <button id="uploadManualBtn" onclick="uploadAllManual()"
+                            style="background:#27ae60;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-weight:bold;">
+                        <i class="fa-solid fa-upload"></i> Upload ${manualStudents.length} Students
+                    </button>
+                </div>
+            `;
+        }
+        
+        const previewTable = document.getElementById('manualPreviewTable');
+        if (previewTable) {
+            previewTable.innerHTML = html;
+        }
+        
+        previewDiv.style.display = 'block';
+        console.log('Preview shown with', manualStudents.length, 'students');
+    }
+
+    function removeStudent(index) {
+        if (manualStudents && index >= 0 && index < manualStudents.length) {
+            const removed = manualStudents.splice(index, 1)[0];
+            console.log('Removed student:', removed);
+            showManualPreview();
+            showSimpleMessage(`Removed: ${removed.first_name} ${removed.last_name}`);
+        }
+    }
+
+    function uploadAllManual() {
+        console.log('Uploading all manual students...');
+        
+        if (!manualStudents || manualStudents.length === 0) {
+            alert('No students to upload!');
+            return;
+        }
+        
+        // Use the same upload function that works for CSV
+        uploadStudents(manualStudents);
+    }
+
+    function showSimpleMessage(text) {
+        // Create or show a simple message
+        let messageDiv = document.getElementById('simpleMessage');
+        if (!messageDiv) {
+            messageDiv = document.createElement('div');
+            messageDiv.id = 'simpleMessage';
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #27ae60;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 4px;
+                z-index: 10000;
+                display: none;
+            `;
+            document.body.appendChild(messageDiv);
+        }
+        
+        messageDiv.textContent = text;
+        messageDiv.style.display = 'block';
+        
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 3000);
+    }
+
+    function updateManualPreview() {
+        const previewTable = document.getElementById('manualPreviewTable');
+        const previewSection = document.getElementById('manualStudentsList');
+        const countSpan = document.getElementById('manualStudentCount');
+        
+        if (manualStudents.length === 0) {
+            if (previewSection) previewSection.style.display = 'none';
+            return;
+        }
+        
+        let html = '<table class="csv-preview-table">';
+        html += '<thead><tr><th>LRN</th><th>Name</th><th>Section</th><th>Action</th></tr></thead><tbody>';
+        
+        manualStudents.forEach((student, index) => {
+            html += `<tr>
+                <td>${escapeHtml(student.lrn)}</td>
+                <td>${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</td>
+                <td>${escapeHtml(student.section)}</td>
+                <td><button onclick="removeManualStudent(${index})" class="remove-btn">Remove</button></td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table>';
+        if (previewTable) previewTable.innerHTML = html;
+        if (countSpan) countSpan.textContent = manualStudents.length;
+        if (previewSection) previewSection.style.display = 'block';
+    }
+
+    function removeManualStudent(index) {
+        if (index >= 0 && index < manualStudents.length) {
+            manualStudents.splice(index, 1);
+            updateManualPreview();
+        }
+    }
+
+    function uploadManualStudents() {
+        if (manualStudents.length === 0) {
+            showUploadMessage('No students to add', 'error');
+            return;
+        }
+        
+        console.log('Importing manual students:', manualStudents);
+        uploadStudents(manualStudents);
+    }
+
+    // ==========================================
+    // HELPER FUNCTIONS
+    // ==========================================
+    function showUploadMessage(message, type) {
+        const messageDiv = document.getElementById('uploadStatusMessage');
+        if (!messageDiv) return;
+        
+        messageDiv.textContent = message;
+        messageDiv.className = `upload-message ${type}`;
+        messageDiv.style.display = 'block';
+        
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 3000);
+    }
+
+    function closeUploadModal() {
+        const modal = document.getElementById('uploadModal');
+        if (modal) modal.classList.remove('active');
+        resetUploadForm();
+    }
+
+    function uploadStudents(students) {
+        console.log('Adding students...');
+        
+        if (!currentQuiz) {
+            alert('Please select a quiz first!');
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Adding Students',
+            text: 'Please wait...',
+            allowOutsideClick: false,
+            showConfirmButton: false
+        });
+        
+        fetch('/api/add_students_simple', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                quiz_id: currentQuiz.quiz_id,
+                students: students
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Response:', data);
+            Swal.close();
+            
+            if (data.success) {
+                let message = `Added ${data.added_count} student(s)`;
+                if (data.errors && data.errors.length > 0) {
+                    message += `\n(${data.errors.length} errors)`;
+                }
+                
+                Swal.fire({
+                    title: 'Success!',
+                    text: message,
+                    icon: 'success'
+                }).then(() => {
+                    // Refresh the view
+                    viewQuizDetail(currentQuiz.quiz_id);
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.close();
+            Swal.fire('Error', 'Network error: ' + error.message, 'error');
+        });
+    }
+
+    function forceRefreshStudentList() {
+        if (!currentQuiz) return;
+        
+        console.log('Force refreshing student list...');
+        
+        fetch(`/api/get_quiz_detail/${currentQuiz.quiz_id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentQuiz.students = data.students || [];
+                    populateStudents();
+                    populateLeaderboard();
+                    console.log(`✅ Refreshed: ${currentQuiz.students.length} students`);
+                    
+                    // Also reload the quiz list
+                    loadQuizzesFromDB();
+                } else {
+                    console.error('Refresh failed:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Refresh error:', error);
+            });
+    }
+
+    function refreshStudentList() {
+        if (!currentQuiz) return;
+        
+        console.log('Refreshing student list...');
+        
+        const tbody = document.getElementById('studentTableBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 20px;">
+                        <div style="animation: spin 1s linear infinite; font-size: 24px;">🔄</div>
+                        <div style="margin-top: 10px;">Refreshing...</div>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        fetch(`/api/get_quiz_detail/${currentQuiz.quiz_id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentQuiz.students = data.students || [];
+                    populateStudents();
+                    populateLeaderboard();
+                    updateStudentCount();
+                    console.log(`✅ Refreshed: ${currentQuiz.students.length} students`);
+                } else {
+                    console.error('Refresh failed:', data.message);
+                    populateStudents();
+                }
+            })
+            .catch(error => {
+                console.error('Refresh error:', error);
+                populateStudents();
+            });
+    }
+
+    function updateStudentCount() {
+        const studentCount = document.getElementById('studentCount');
+        if (!studentCount || !currentQuiz) return;
+        const count = currentQuiz.students?.length || 0;
+        studentCount.textContent = `(${count} student${count !== 1 ? 's' : ''})`;
+    }
+
+    // ==========================================
+    // QUIZ CONTROL FUNCTIONS
+    // ==========================================
+    function startQuiz() {
+        if (!currentQuiz || !currentQuiz.quiz_id) {
+            Swal.fire('Error', 'No quiz selected', 'error');
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Start Quiz?',
+            text: 'This will start the quiz for all students.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Start Quiz',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading('Starting quiz...');
+                fetch(`/api/start_quiz/${currentQuiz.quiz_id}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+                        if (data.success) {
+                            currentQuiz.quiz_status = 'active';
+                            updateQuizControls();
+                            updateQuizMetadata();
+                            Swal.fire('Success', 'Quiz started!', 'success');
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        console.error('Start error:', error);
+                        Swal.fire('Error', 'Failed to start quiz', 'error');
+                    });
+            }
+        });
+    }
+
+    function pauseQuiz() {
+        if (!currentQuiz || !currentQuiz.quiz_id) {
+            Swal.fire('Error', 'No quiz selected', 'error');
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Pause Quiz?',
+            text: 'This will pause the quiz for all students.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Pause Quiz',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading('Pausing quiz...');
+                fetch(`/api/pause_quiz/${currentQuiz.quiz_id}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+                        if (data.success) {
+                            currentQuiz.quiz_status = 'paused';
+                            updateQuizControls();
+                            updateQuizMetadata();
+                            Swal.fire('Success', 'Quiz paused!', 'success');
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        console.error('Pause error:', error);
+                        Swal.fire('Error', 'Failed to pause quiz', 'error');
+                    });
+            }
+        });
+    }
+
+    function resumeQuiz() {
+        if (!currentQuiz || !currentQuiz.quiz_id) {
+            Swal.fire('Error', 'No quiz selected', 'error');
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Resume Quiz?',
+            text: 'This will resume the quiz for all students.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Resume Quiz',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading('Resuming quiz...');
+                fetch(`/api/resume_quiz/${currentQuiz.quiz_id}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+                        if (data.success) {
+                            currentQuiz.quiz_status = 'active';
+                            updateQuizControls();
+                            updateQuizMetadata();
+                            Swal.fire('Success', 'Quiz resumed!', 'success');
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        console.error('Resume error:', error);
+                        Swal.fire('Error', 'Failed to resume quiz', 'error');
+                    });
+            }
+        });
+    }
+
+    function stopQuiz() {
+        if (!currentQuiz || !currentQuiz.quiz_id) {
+            Swal.fire('Error', 'No quiz selected', 'error');
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Stop Quiz?',
+            text: 'This will stop the quiz for all students.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Stop Quiz',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading('Stopping quiz...');
+                fetch(`/api/stop_quiz/${currentQuiz.quiz_id}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+                        if (data.success) {
+                            currentQuiz.quiz_status = 'completed';
+                            updateQuizControls();
+                            updateQuizMetadata();
+                            Swal.fire('Success', 'Quiz stopped!', 'success');
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        console.error('Stop error:', error);
+                        Swal.fire('Error', 'Failed to stop quiz', 'error');
+                    });
+            }
+        });
+    }
+
+    function archiveQuiz(quizId) {
+        Swal.fire({
+            title: 'Archive Quiz?',
+            text: 'This will move the quiz to archived section.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Archive',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading('Archiving...');
+                fetch(`/api/archive_quiz/${quizId}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        hideLoading();
+                        if (data.success) {
+                            if (currentQuiz && currentQuiz.quiz_id === quizId) {
+                                backToList();
+                            } else {
+                                loadQuizzesFromDB();
+                            }
+                            Swal.fire('Success', 'Quiz archived!', 'success');
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading();
+                        console.error('Archive error:', error);
+                        Swal.fire('Error', 'Failed to archive quiz', 'error');
+                    });
+            }
+        });
+    }
+
+    function generateQR(quizId) {
+        showLoading('Generating QR code...');
+        
+        fetch(`/api/generate_qr/${quizId}`)
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    const modal = document.getElementById('qrModal');
+                    const qrContainer = document.getElementById('qrcode');
+                    const quizUrl = document.getElementById('quizUrl');
+                    
+                    if (!qrContainer || !quizUrl) {
+                        console.error('QR modal elements not found');
+                        return;
+                    }
+                    
+                    // Clear previous QR code
+                    qrContainer.innerHTML = '';
+                    
+                    // Generate QR code with clickable URL
+                    const qrCode = new QRCode(qrContainer, {
+                        text: data.url,
+                        width: 256,
+                        height: 256,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    
+                    // Make the QR code clickable
+                    qrContainer.onclick = function() {
+                        window.open(data.url, '_blank');
+                    };
+                    qrContainer.style.cursor = 'pointer';
+                    qrContainer.title = 'Click to open quiz link';
+                    
+                    // Display clickable URL
+                    quizUrl.innerHTML = `
+                        <strong>Quiz URL:</strong><br>
+                        <a href="${escapeHtml(data.url)}" target="_blank" style="color: #1a3c34; word-break: break-all; text-decoration: underline;">
+                            ${escapeHtml(data.url)}
+                        </a>
+                        <br><br>
+                        <button onclick="copyQuizUrl()" style="
+                            background: #1a3c34;
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                            margin-top: 5px;
+                        ">
+                            <i class="fa-solid fa-copy"></i> Copy URL
+                        </button>
+                    `;
+                    
+                    if (modal) {
+                        modal.classList.add('active');
+                    }
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('QR error:', error);
+                Swal.fire('Error', 'Failed to generate QR', 'error');
+            });
+    }
+
+    function copyQuizUrl() {
+        const urlLink = document.querySelector('#quizUrl a');
+        if (urlLink) {
+            const url = urlLink.href;
+            navigator.clipboard.writeText(url).then(() => {
+                Swal.fire({
+                    title: 'Copied!',
+                    text: 'URL copied to clipboard',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }).catch(() => {
+                Swal.fire('Error', 'Failed to copy URL', 'error');
+            });
+        }
+    }
+
+    function closeQRModal() {
+        const modal = document.getElementById('qrModal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    // ==========================================
+    // RETAKE SETTINGS
+    // ==========================================
+    function showSimpleRetakeOptions() {
+        if (!currentQuiz) {
+            Swal.fire('Error', 'No quiz selected', 'error');
+            return;
+        }
+        
+        // Load current settings
+        const settings = currentQuiz.retake_settings || { max_attempts: 1, policy: 'highest' };
+        const slider = document.getElementById('maxAttemptsSlider');
+        const value = document.getElementById('attemptValue');
+        const policy = document.getElementById('retakePolicy');
+        
+        if (slider) slider.value = settings.max_attempts;
+        if (value) value.textContent = settings.max_attempts;
+        if (policy) policy.value = settings.policy;
+        
+        // Show modal
+        const modal = document.getElementById('retakeModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    function updateAttemptValue() {
+        const slider = document.getElementById('maxAttemptsSlider');
+        const value = document.getElementById('attemptValue');
+        if (slider && value) {
+            value.textContent = slider.value;
+        }
+    }
+
+    function saveSimpleRetakeSettings() {
+        if (!currentQuiz || !currentQuiz.quiz_id) {
+            Swal.fire('Error', 'No quiz selected', 'error');
+            return;
+        }
+        
+        const slider = document.getElementById('maxAttemptsSlider');
+        const policy = document.getElementById('retakePolicy');
+        
+        if (!slider || !policy) return;
+        
+        const maxAttempts = parseInt(slider.value);
+        const policyValue = policy.value;
+        
+        showLoading('Saving settings...');
+        
+        fetch('/api/save_retake_settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                quiz_id: currentQuiz.quiz_id,
+                max_attempts: maxAttempts,
+                policy: policyValue,
+                allow_retakes: maxAttempts > 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                currentQuiz.retake_settings = {
+                    max_attempts: maxAttempts,
+                    policy: policyValue
+                };
+                currentQuiz.allow_retakes = maxAttempts > 1;
+                
+                updateQuizMetadata();
+                
+                Swal.fire({
+                    title: 'Settings Saved!',
+                    text: 'Retake settings updated successfully',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    closeRetakeModal();
+                });
+            } else {
+                Swal.fire('Error', data.message || 'Failed to save settings', 'error');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Retake settings error:', error);
+            Swal.fire('Error', 'Failed to save settings', 'error');
+        });
+    }
+
+    function closeRetakeModal() {
+        const modal = document.getElementById('retakeModal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    // ==========================================
+    // EDIT QUIZ FUNCTIONS
+    // ==========================================
+    function openEditQuiz(quizId) {
+        currentEditQuizId = quizId;
+        
+        const modal = document.getElementById('editModal');
+        if (modal) modal.style.display = 'block';
+        
+        showLoading('Loading quiz...');
+        fetch(`/api/get_quiz_for_edit/${quizId}`)
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    renderEditForm(data.quiz, data.questions);
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                    closeEditModal();
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Edit load error:', error);
+                Swal.fire('Error', 'Failed to load quiz', 'error');
+                closeEditModal();
+            });
+    }
+
+    function renderEditForm(quiz, questions) {
+        let html = `
+            <div style="padding: 20px;">
+                <h3 style="margin-top: 0;">Edit Quiz: ${escapeHtml(quiz.quiz_title)}</h3>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Subject</label>
+                    <input type="text" id="editSubject" value="${escapeHtml(quiz.subject_name || '')}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Grade Level</label>
+                    <select id="editGrade" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="7" ${quiz.grade_level == 7 ? 'selected' : ''}>Grade 7</option>
+                        <option value="8" ${quiz.grade_level == 8 ? 'selected' : ''}>Grade 8</option>
+                        <option value="9" ${quiz.grade_level == 9 ? 'selected' : ''}>Grade 9</option>
+                        <option value="10" ${quiz.grade_level == 10 ? 'selected' : ''}>Grade 10</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Section</label>
+                    <input type="text" id="editSection" value="${escapeHtml(quiz.section_name || '')}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Topic</label>
+                    <input type="text" id="editTopic" value="${escapeHtml(quiz.topic || '')}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Duration (minutes)</label>
+                    <input type="number" id="editDuration" value="${quiz.duration_minutes || 5}" min="1" max="180" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <button onclick="saveQuizEdit()" style="padding: 10px 30px; background: #1a3c34; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <button onclick="closeEditModal()" style="padding: 10px 30px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; margin-left: 10px;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        const content = document.getElementById('editModalContent');
+        if (content) content.innerHTML = html;
+    }
+
+    function saveQuizEdit() {
+        const subject = document.getElementById('editSubject')?.value.trim();
+        const grade = document.getElementById('editGrade')?.value;
+        const section = document.getElementById('editSection')?.value.trim();
+        const topic = document.getElementById('editTopic')?.value.trim();
+        const duration = document.getElementById('editDuration')?.value;
+        
+        if (!subject || !section || !topic || !duration) {
+            Swal.fire('Error', 'Please fill all required fields', 'error');
+            return;
+        }
+        
+        showLoading('Saving...');
+        
+        fetch(`/api/update_quiz/${currentEditQuizId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                subject: subject,
+                grade: grade,
+                section: section,
+                topic: topic,
+                duration: duration
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                Swal.fire('Success', 'Quiz updated!', 'success').then(() => {
+                    closeEditModal();
+                    if (currentQuiz && currentQuiz.quiz_id === currentEditQuizId) {
+                        viewQuizDetail(currentEditQuizId);
+                    } else {
+                        loadQuizzesFromDB();
+                    }
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Save edit error:', error);
+            Swal.fire('Error', 'Failed to update quiz', 'error');
+        });
+    }
+
+    function closeEditModal() {
+        const modal = document.getElementById('editModal');
+        if (modal) modal.style.display = 'none';
+        const content = document.getElementById('editModalContent');
+        if (content) content.innerHTML = '';
+        currentEditQuizId = null;
+    }
+
+    // ==========================================
+    // REPORT GENERATION - EXCEL FORMAT
+    // ==========================================
+    function showSimpleReportModal() {
+        if (!currentQuiz || !currentQuiz.quiz_id) {
+            Swal.fire('Error', 'Please select a quiz first', 'error');
+            return;
+        }
+        
+        const modal = document.getElementById('reportModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    function closeReportModal() {
+        const modal = document.getElementById('reportModal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    function generateSimpleReport() {
+        // Check if currentQuiz exists and has quiz_id
+        if (!currentQuiz || !currentQuiz.quiz_id) {
+            Swal.fire('Error', 'Please select a quiz first', 'error');
+            return;
+        }
+        
+        const includeStudents = document.getElementById('simpleIncludeStudents')?.value || 'all';
+        const sortBy = document.getElementById('simpleSortBy')?.value || 'last_name_asc';
+        
+        console.log('Current quiz ID:', currentQuiz.quiz_id);
+        
+        // Parse sortBy value
+        let sortField, sortOrder;
+        if (sortBy === 'last_name_asc') {
+            sortField = 'last_name';
+            sortOrder = 'asc';
+        } else if (sortBy === 'last_name_desc') {
+            sortField = 'last_name';
+            sortOrder = 'desc';
+        } else if (sortBy === 'first_name_asc') {
+            sortField = 'first_name';
+            sortOrder = 'asc';
+        } else if (sortBy === 'first_name_desc') {
+            sortField = 'first_name';
+            sortOrder = 'desc';
+        } else if (sortBy === 'score_desc') {
+            sortField = 'score';
+            sortOrder = 'desc';
+        } else if (sortBy === 'score_asc') {
+            sortField = 'score';
+            sortOrder = 'asc';
+        } else {
+            sortField = 'last_name';
+            sortOrder = 'asc';
+        }
+        
+        console.log('Generating Excel report for quiz:', currentQuiz.quiz_id);
+        console.log('Sorting by:', sortField, sortOrder);
+        console.log('Include students:', includeStudents);
+        
+        // Show progress
+        const progress = document.getElementById('simpleReportProgress');
+        const btn = document.getElementById('generateSimpleReportBtn');
+        const status = document.getElementById('simpleReportStatus');
+        
+        if (progress) progress.style.display = 'block';
+        if (btn) btn.style.display = 'none';
+        if (status) status.textContent = 'Preparing Excel report...';
+        
+        // Generate Excel report with the new format
+        generateExcelReport(currentQuiz.quiz_id, includeStudents, sortField, sortOrder);
+    }
+
+    function generateExcelReport(quizId, includeStudents, sortField, sortOrder) {
+        showLoading('Generating Excel report...');
+        
+        fetch('/api/generate_excel_report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                quiz_id: quizId,
+                filters: {
+                    include_students: includeStudents,
+                    sort_field: sortField,
+                    sort_order: sortOrder
+                }
+            })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Error response text:', text);
+                    let errorMsg = 'Failed to generate Excel report';
+                    try {
+                        const errorData = JSON.parse(text);
+                        errorMsg = errorData.message || errorMsg;
+                    } catch (e) {
+                        if (text && text.length < 100) {
+                            errorMsg = text;
+                        }
+                    }
+                    throw new Error(errorMsg);
+                });
+            }
+            
+            // Check content type
+            const contentType = response.headers.get('content-type') || '';
+            console.log('Content-Type:', contentType);
+            
+            // Handle Excel file
+            if (contentType.includes('excel') || contentType.includes('spreadsheet') || 
+                contentType.includes('application/vnd.ms-excel') || 
+                contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+                return response.blob();
+            } else {
+                return response.text().then(text => {
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.success === false) {
+                            throw new Error(data.message || 'Excel report generation failed');
+                        }
+                        return new Blob([text], { type: 'text/plain' });
+                    } catch (e) {
+                        return new Blob([text], { type: 'text/plain' });
+                    }
+                });
+            }
+        })
+        .then(blob => {
+            hideLoading();
+            
+            // Reset UI
+            const progress = document.getElementById('simpleReportProgress');
+            const btn = document.getElementById('generateSimpleReportBtn');
+            if (progress) progress.style.display = 'none';
+            if (btn) btn.style.display = 'block';
+            
+            // Check if blob is Excel
+            if (blob.type && (blob.type.includes('excel') || blob.type.includes('spreadsheet') || 
+                blob.type === 'application/vnd.ms-excel' || 
+                blob.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+                
+                // Download Excel file
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Create filename with quiz title and timestamp
+                const safeTitle = currentQuiz.quiz_title 
+                    ? currentQuiz.quiz_title.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+                    : 'quiz';
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+                const filename = `${safeTitle}_report_${timestamp}.xlsx`;
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+                
+                closeReportModal();
+                
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Excel report downloaded successfully',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                // Try to download as CSV if not Excel
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `quiz_report_${quizId}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+                
+                closeReportModal();
+                
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Report downloaded as CSV',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error generating Excel report:', error);
+            
+            // Reset UI
+            const progress = document.getElementById('simpleReportProgress');
+            const btn = document.getElementById('generateSimpleReportBtn');
+            const status = document.getElementById('simpleReportStatus');
+            
+            if (progress) progress.style.display = 'none';
+            if (btn) btn.style.display = 'block';
+            if (status) status.textContent = 'Preparing data...';
+            
+            // Fallback to CSV if Excel fails
+            Swal.fire({
+                title: 'Excel Generation Failed',
+                text: 'Falling back to CSV format...',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Generate CSV',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Generate CSV instead
+                    generateCSVReport(quizId, includeStudents, sortField, sortOrder);
+                }
+            });
+        });
+    }
+
+    function generateCSVReport(quizId, includeStudents, sortField, sortOrder) {
+        showLoading('Generating CSV report...');
+        
+        fetch('/api/generate_report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                quiz_id: quizId,
+                filters: {
+                    include_students: includeStudents,
+                    sort_field: sortField,
+                    sort_order: sortOrder
+                }
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to generate CSV report');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            hideLoading();
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            // Create filename with quiz title and timestamp
+            const safeTitle = currentQuiz.quiz_title 
+                ? currentQuiz.quiz_title.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+                : 'quiz';
+            const timestamp = new Date().getTime();
+            const filename = `${safeTitle}_report_${timestamp}.csv`;
+            
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+            
+            closeReportModal();
+            
+            Swal.fire({
+                title: 'Success!',
+                text: 'CSV report downloaded successfully',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error generating CSV report:', error);
+            
+            Swal.fire({
+                title: 'Error',
+                html: `
+                    <div style="text-align: left;">
+                        <p><strong>Failed to generate report:</strong></p>
+                        <p>${error.message}</p>
+                    </div>
+                `,
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        });
+    }
+
+    // ==========================================
+    // REAL-TIME UPDATES
+    // ==========================================
+    function startStudentUpdates() {
+        if (studentUpdateInterval) clearInterval(studentUpdateInterval);
+        
+        studentUpdateInterval = setInterval(() => {
+            if (currentQuiz && (currentQuiz.quiz_status === 'active' || currentQuiz.quiz_status === 'paused')) {
+                refreshStudentData();
+            }
+        }, 5000);
+    }
+
+    function refreshStudentData() {
+        if (!currentQuiz || !currentQuiz.quiz_id) return;
+        
+        // Show subtle loading indicator
+        const refreshBtn = document.querySelector('.refresh-students-btn');
+        if (refreshBtn) {
+            refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        }
+        
+        fetch(`/api/get_quiz_detail/${currentQuiz.quiz_id}?_=${Date.now()}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.students) {
+                    // Track changes
+                    const oldStudents = currentQuiz.students || [];
+                    const newStudents = data.students || [];
+                    
+                    // Check if any student status changed
+                    let statusChanged = false;
+                    let newStudentAdded = false;
+                    
+                    newStudents.forEach(newStudent => {
+                        const oldStudent = oldStudents.find(s => s.lrn === newStudent.lrn);
+                        
+                        if (!oldStudent) {
+                            // New student added
+                            newStudentAdded = true;
+                        } else if (oldStudent.attempt_status !== newStudent.attempt_status || 
+                                  oldStudent.score !== newStudent.score) {
+                            // Status or score changed
+                            statusChanged = true;
+                        }
+                    });
+                    
+                    // Update data
+                    currentQuiz.students = newStudents;
+                    
+                    // Update UI if changes detected
+                    if (statusChanged || newStudentAdded) {
+                        console.log('Student data changed - updating UI');
+                        populateStudents();
+                        populateLeaderboard();
+                        
+                        // Highlight new/changed rows
+                        if (newStudentAdded) {
+                            highlightNewStudents(oldStudents, newStudents);
+                        }
+                    }
+                }
+                
+                // Reset refresh button
+                if (refreshBtn) {
+                    refreshBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i>';
+                }
+            })
+            .catch(error => {
+                console.error('Refresh error:', error);
+                if (refreshBtn) {
+                    refreshBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i>';
+                }
+            });
+    }
+
+    function highlightNewStudents(oldStudents, newStudents) {
+        const tbody = document.getElementById('studentTableBody');
+        if (!tbody) return;
+        
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach((row, index) => {
+            const lrnCell = row.querySelector('td:first-child');
+            if (lrnCell) {
+                const lrn = lrnCell.textContent.trim();
+                const wasPresent = oldStudents.some(s => s.lrn === lrn);
+                const isNew = !wasPresent && index < newStudents.length;
+                
+                if (isNew) {
+                    row.classList.add('student-row-new');
+                    setTimeout(() => {
+                        row.classList.remove('student-row-new');
+                    }, 3000);
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // UTILITY FUNCTIONS
+    // ==========================================
+    function showLoading(message = 'Loading...') {
+        Swal.fire({
+            title: message,
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+    }
+
+    function hideLoading() {
+        Swal.close();
+    }
+
+    function logout() {
+        Swal.fire({
+            title: 'Logout?',
+            text: 'Are you sure you want to logout?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Logout',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '/process_logout';
+            }
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ==========================================
+    // MODAL CLICK HANDLERS
+    // ==========================================
+    window.onclick = function(event) {
+        const modals = ['editModal', 'uploadModal', 'retakeModal', 'reportModal', 'qrModal'];
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (event.target == modal) {
+                if (modalId === 'editModal') closeEditModal();
+                if (modalId === 'uploadModal') closeUploadModal();
+                if (modalId === 'retakeModal') closeRetakeModal();
+                if (modalId === 'reportModal') closeReportModal();
+                if (modalId === 'qrModal') closeQRModal();
+            }
+        });
+    };
+
+    // Close modals with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeEditModal();
+            closeUploadModal();
+            closeRetakeModal();
+            closeReportModal();
+            closeQRModal();
+        }
+    });
+
+    // ==========================================
+    // ADD SPIN ANIMATION CSS
+    // ==========================================
+    if (!document.getElementById('spinAnimationStyle')) {
+        const style = document.createElement('style');
+        style.id = 'spinAnimationStyle';
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+</script>
+</body>
+</html>

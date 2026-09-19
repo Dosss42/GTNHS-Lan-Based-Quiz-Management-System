@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTNHS Smart Quiz System</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='create_quiz.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sweetalert2.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}">
+
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/Gtnhs logo.png') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    
+
+</head>
+<body>
+
+    <script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <div class="header">GENERAL TINIO NATIONAL HIGH SCHOOL SMART QUIZ SYSTEM</div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="logo-section">
+                <div class="logo-icon">QZ</div>
+                <div class="logo-text">SMART QUIZ</div>
+            </div>
+
+        <form action="/menu_action" method="POST" id="menuForm">
+            <button type="submit" name="menu" value="dashboard" class="menu-item">
+             <i class="fa-solid fa-chart-bar"></i> DASHBOARD</button>
+            <button type="submit" name="menu" value="create_quiz" class="menu-item active">
+             <i class="fa-solid fa-plus"></i>CREATE QUIZ</button>
+            <button type="submit" name="menu" value="session" class="menu-item">
+             <i class="fa-solid fa-display"></i>SESSION</button>
+            <button type="submit" name="menu" value="retrieval" class="menu-item">
+             <i class="fa-regular fa-file-zipper"></i></i>RETRIEVAL</button>
+        </form>
+            <button class="menu-item" id="logoutButton">Logout</button>
+        </div>
+
+        <div class="main-content">
+            <!-- Popup Form -->
+            <div class="popup-overlay" id="popupOverlay">
+                <div class="popup-form">
+                    <div class="popup-header">
+                        <h2>Create New Quiz</h2>
+                       
+                        
+                          <form action="/menu_action" method="POST">
+                         <button type="submit" name="menu" value="dashboard" class="back-button">← Back</button>
+                         </form>
+
+                    </div>
+                    <div class="popup-body">
+                        <div class="form-group">
+                            <label>Section Name</label>
+                            <input type="text" id="sectionName" placeholder="Enter section name">
+                        </div>
+                        <div class="form-group">
+                            <label>Grade Level</label>
+                            <select id="gradeLevel">
+                                <option value="">Select grade level</option>
+                                <option value="7">Grade 7</option>
+                                <option value="8">Grade 8</option>
+                                <option value="9">Grade 9</option>
+                                <option value="10">Grade 10</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <input type="text" id="subject" placeholder="Enter subject">
+                        </div>
+                        <div class="form-group">
+                            <label>Topic</label>
+                            <input type="text" id="topic" placeholder="Enter topic">
+                        </div>
+                        <div class="form-group">
+                            <label>Quiz Duration</label>
+                            <select id="quizDuration">
+                                <option value="">Select duration</option>
+                                <option value="300">5 minutes</option>
+                                <option value="600">10 minutes</option>
+                                <option value="900">15 minutes</option>
+                                <option value="1200">20 minutes</option>
+                                <option value="1800">30 minutes</option>
+                                <option value="2700">45 minutes</option>
+                                <option value="3600">60 minutes</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="customDurationGroup" style="display: none;">
+                            <label>Custom Duration (minutes)</label>
+                            <input type="number" id="customDuration" placeholder="Enter minutes" min="1" max="180">
+                        </div>
+
+                        <button class="submit-button" onclick="submitQuizInfo()">Create Quiz</button>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Quiz Creation Interface -->
+        <div class="quiz-interface" id="quizInterface">
+            <!-- Quiz Info Display -->
+            <div class="quiz-info-banner" id="quizInfoBanner" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <strong>Section:</strong> <span id="displaySection"></span> | 
+                        <strong>Grade:</strong> <span id="displayGrade"></span> | 
+                        <strong>Subject:</strong> <span id="displaySubject"></span> | 
+                        <strong>Topic:</strong> <span id="displayTopic"></span>
+                    </div>
+                    <div style="background: #1a3c34; padding: 8px 15px; border-radius: 5px; color: white;">
+                        <strong>⏱️ Duration:</strong> <span id="displayDuration"></span>
+                    </div>
+
+                    <!-- PDF and Import Buttons -->
+                    <div class="action-buttons" style="display: flex; gap: 10px;">
+                        <button class="pdf-btn" onclick="downloadQuizPDF()" style="background: #e74c3c; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer;">
+                            📄 Save as PDF
+                        </button>
+                        <button class="import-btn" onclick="showImportOptions()" style="background: #3498db; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer;">
+                            📁 Import Questions
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Import Options Modal (This should be outside the banner) -->
+            <div class="import-modal" id="importModal">
+                <div class="import-modal-content">
+                    <div class="import-modal-header">
+                        <h3>Import Questions from File</h3>
+                        <button class="close-import" onclick="closeImportModal()">×</button>
+                    </div>
+                    <div class="import-modal-body">
+                        <div class="import-tabs">
+                            <button class="import-tab active" onclick="switchImportTab('txt')">Text File (.txt)</button>
+                            <button class="import-tab" onclick="switchImportTab('word')">Word (.docx)</button>
+                            <button class="import-tab" onclick="switchImportTab('excel')">Excel (.xlsx)</button>
+                        </div>
+                        
+                        <div id="txtImport" class="import-tab-content active">
+                            <h4>Text File Format</h4>
+                            <textarea id="txtContent" placeholder="Paste your questions here or upload a file...
+
+        Format example:
+        [BEGINNER]
+        1. Is the Earth round? (TRUE)
+        2. Water boils at 100°C? (TRUE)
+
+        [INTERMEDIATE]
+        3. What is the capital of France?
+        A) London
+        B) Paris ✓
+        C) Berlin
+        D) Madrid
+
+        [ADVANCED]
+        4. Explain photosynthesis in plants.
+        Answer: Process by which plants convert light energy into chemical energy" 
+        rows="12" style="width: 782px; height: 221px"></textarea>
+                            <div class="import-actions">
+                                <input type="file" id="txtFile" accept=".txt" style="display: none;" onchange="handleTxtFile(this)">
+                                <button class="btn-secondary" onclick="document.getElementById('txtFile').click()">📄 Upload .txt File</button>
+                                <button class="btn-primary" onclick="parseTxtQuestions()">Parse Questions</button>
+                            </div>
+                            <div class="format-help">
+                                <strong>Format Tips:</strong>
+                                <ul>
+                                    <li>Use [BEGINNER], [INTERMEDIATE], [ADVANCED] to separate sections</li>
+                                    <li>Number questions sequentially (1., 2., etc.)</li>
+                                    <li>For TRUE/FALSE, put answer in parentheses: (TRUE) or (FALSE)</li>
+                                    <li>For multiple choice, mark correct answer with ✓</li>
+                                    <li>For short answer, use "Answer: " followed by the answer</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div id="wordImport" class="import-tab-content">
+                            <h4>Word Document Import</h4>
+                            <p>Upload a Word document (.docx) with questions in structured format.</p>
+                            <input type="file" id="wordFile" accept=".docx" onchange="handleWordFile(this)">
+                            <div class="format-help">
+                                <strong>Format Guidelines:</strong>
+                                <ul>
+                                    <li>Use headings: "BEGINNER", "INTERMEDIATE", "ADVANCED"</li>
+                                    <li>Number questions sequentially</li>
+                                    <li>For multiple choice, mark correct answer with ✓ or [CORRECT]</li>
+                                    <li>For TRUE/FALSE, put answer in parentheses</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div id="excelImport" class="import-tab-content">
+                            <h4>Excel Spreadsheet Import</h4>
+                            <p>Upload an Excel file (.xlsx) with the following columns:</p>
+                            <div class="excel-template">
+                                <table>
+                                    <tr><th>Level</th><th>Question</th><th>Answer</th><th>Choice1</th><th>Choice2</th><th>Choice3</th><th>Choice4</th></tr>
+                                    <tr><td>BEGINNER</td><td>Is the sky blue?</td><td>TRUE</td><td></td><td></td><td></td><td></td></tr>
+                                    <tr><td>INTERMEDIATE</td><td>What is 2+2?</td><td>4</td><td>3</td><td>4</td><td>5</td><td>6</td></tr>
+                                    <tr><td>ADVANCED</td><td>Explain gravity</td><td>Force that attracts objects with mass</td><td></td><td></td><td></td><td></td></tr>
+                                </table>
+                            </div>
+                            <input type="file" id="excelFile" accept=".xlsx" onchange="handleExcelFile(this)">
+                            <button class="btn-secondary" onclick="downloadExcelTemplate()">📥 Download Template</button>
+                        </div>
+                    </div>
+                    <div class="import-modal-footer">
+                       
+                    </div>
+                </div>
+            </div>
+
+            <!-- BEGINNER Section -->
+            <div class="quiz-section">
+                <div class="section-header">
+                    <div class="section-title">BEGINNER</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="add-question-btn" onclick="addQuestion('beginner')">+ Add Question</button>
+                        <div class="question-counter" id="beginnerCounter">Questions: 0</div>
+                    </div>
+                </div>
+                <div id="beginnerQuestions"></div>
+            </div>
+
+            <!-- INTERMEDIATE Section -->
+            <div class="quiz-section">
+                <div class="section-header">
+                    <div class="section-title">INTERMEDIATE</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="add-question-btn" onclick="addQuestion('intermediate')">+ Add Question</button>
+                        <div class="question-counter" id="intermediateCounter">Questions: 0</div>
+                    </div>
+                </div>
+                <div id="intermediateQuestions"></div>
+            </div>
+
+            <!-- ADVANCE Section -->
+            <div class="quiz-section">
+                <div class="section-header">
+                    <div class="section-title">ADVANCE</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="add-question-btn" onclick="addQuestion('advance')">+ Add Question</button>
+                        <div class="question-counter" id="advanceCounter">Questions: 0</div>
+                    </div>
+                </div>
+                <div id="advanceQuestions"></div>
+            </div>
+        </div>
+
+    <!-- Save Quiz Button -->
+    <button class="save-quiz-btn" id="saveQuizBtn" onclick="saveQuiz()">Save Quiz</button>
+
+    <!-- Hidden Print Area -->
+    <div id="printArea" style="display: none;"></div>
+
+    <style>
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        #customDurationGroup {
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+
+<script>
+
+        let quizData = {
+            beginner: [],
+            intermediate: [],
+            advance: []
+        };
+
+        // ==========================================
+        // HELPER FUNCTIONS
+        // ==========================================
+
+        function updateQuestionNumbers(level) {
+            const container = document.getElementById(`${level}Questions`);
+            if(!container) return;
+            const questions = container.children;
+            for (let i = 0; i < questions.length; i++) {
+                const label = questions[i].querySelector('.question-label');
+                if(label) label.textContent = `Question ${i + 1}`;
+            }
+        }
+
+        function updateQuestionCounters() {
+            const levels = ['beginner', 'intermediate', 'advance'];
+            levels.forEach(level => {
+                const container = document.getElementById(`${level}Questions`);
+                if (!container) return;
+                
+                const questions = container.querySelectorAll('.question-item');
+                const counter = document.getElementById(`${level}Counter`);
+                
+                if (counter) {
+                    counter.textContent = `Questions: ${questions.length}`;
+                }
+            });
+        }
+
+        function closeImportModal() {
+            const modal = document.getElementById('importModal');
+            if(modal) modal.style.display = 'none';
+            const txtContent = document.getElementById('txtContent');
+            if(txtContent) txtContent.value = '';
+        }
+
+        function closePopup() {
+            const popup = document.getElementById('popupOverlay');
+            if (popup) popup.classList.remove('active');
+        }
+
+        function createChoice(questionId, index) {
+            return `
+                <div class="choice-item">
+                    <input type="radio" name="${questionId}-choices" class="choice-radio">
+                    <input type="text" class="choice-input" placeholder="Choice ${index + 1}">
+                    <button type="button" class="delete-button" onclick="removeChoice(this)">-</button>
+                </div>
+            `;
+        }
+
+        function removeChoice(button) {
+            button.parentElement.remove();
+        }
+
+        function addChoice(questionId) {
+            const question = document.getElementById(questionId);
+            if(!question) return;
+            const container = question.querySelector('.choices-container');
+            container.insertAdjacentHTML('beforeend', createChoice(questionId, container.children.length));
+        }
+
+        function selectTF(button) {
+            const buttons = button.parentElement.querySelectorAll('.tf-button');
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            button.classList.add('selected');
+        }
+
+        function removeQuestion(questionId, level) {
+            Swal.fire({
+                title: 'Remove Question?',
+                text: 'Are you sure you want to remove this question?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74c3c',
+                cancelButtonColor: '#95a5a6',
+                confirmButtonText: 'Yes, remove it'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const el = document.getElementById(questionId);
+                    if (el) {
+                        el.remove();
+                        updateQuestionNumbers(level);
+                        updateQuestionCounters();
+                    }
+                }
+            });
+        }
+
+        function capitalizeFirstLetter(text) {
+            if (!text || text.length === 0) return text;
+            return text.charAt(0).toUpperCase() + text.slice(1);
+        }
+
+        function capitalizeSentences(text) {
+            if (!text) return text;
+            return text.replace(/(^\w|\.\s+\w)/g, match => match.toUpperCase());
+        }
+
+        function setupAutoCapitalization() {
+            document.addEventListener('blur', function(e) {
+                if (e.target.classList.contains('question-box')) {
+                    e.target.value = capitalizeSentences(e.target.value);
+                }
+                if (e.target.classList.contains('answer-input') || 
+                    e.target.classList.contains('choice-input')) {
+                    e.target.value = capitalizeFirstLetter(e.target.value);
+                }
+            }, true);
+        }
+
+        // ==========================================
+        // MAIN INITIALIZATION
+        // ==========================================
+
+        window.onload = function() {
+            const popup = document.getElementById('popupOverlay');
+            if (popup) popup.classList.add('active');
+            
+            const logoutBtn = document.getElementById('logoutButton');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    logout();
+                });
+            }
+
+            const durationSelect = document.getElementById('quizDuration');
+            if (durationSelect) {
+                durationSelect.addEventListener('change', function() {
+                    const customGroup = document.getElementById('customDurationGroup');
+                    if (this.value === 'custom') {
+                        customGroup.style.display = 'block';
+                    } else {
+                        customGroup.style.display = 'none';
+                    }
+                });
+            }
+            
+            setupAutoCapitalization();
+            
+            // Inject "Download Template" button into Import Modal if needed
+            injectDownloadTemplateButton();
+        };
+
+        function injectDownloadTemplateButton() {
+            const txtImport = document.getElementById('txtImport');
+            if (txtImport) {
+                const actionsDiv = txtImport.querySelector('.import-actions');
+                if (actionsDiv) {
+                    // Hide the original Parse button if it exists
+                    const parseBtn = actionsDiv.querySelector('button[onclick="parseTxtQuestions()"]');
+                    if(parseBtn) parseBtn.style.display = 'none';
+
+                    if (!actionsDiv.querySelector('.btn-template')) {
+                        actionsDiv.insertAdjacentHTML('beforeend', `
+                            <button class="btn-primary btn-template" style="margin-left: 5px; background-color: #28a745;" onclick="downloadTemplate('txt')">⬇️ Download Template</button>
+                        `);
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // QUIZ CREATION UI
+        // ==========================================
+
+        function showCreateQuizPopup() {
+            const inputs = ['sectionName', 'gradeLevel', 'subject', 'topic', 'quizDuration', 'customDuration'];
+            inputs.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
+            
+            const customDurationGroup = document.getElementById('customDurationGroup');
+            if(customDurationGroup) customDurationGroup.style.display = 'none';
+            
+            const popup = document.getElementById('popupOverlay');
+            if (popup) popup.classList.add('active');
+        }
+
+        function submitQuizInfo() {
+            const section = document.getElementById('sectionName').value.trim();
+            const grade = document.getElementById('gradeLevel').value;
+            const subject = document.getElementById('subject').value.trim();
+            const topic = document.getElementById('topic').value.trim();
+            const durationSelect = document.getElementById('quizDuration').value;
+
+            if (!section || !grade || !subject || !topic || !durationSelect) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Missing Information',
+                    text: 'Please fill in all required fields'
+                });
+                return;
+            }
+
+            let duration;
+            let durationText;
+
+            if (durationSelect === 'custom') {
+                const customMinutes = parseInt(document.getElementById('customDuration').value);
+                if (!customMinutes || customMinutes < 1 || customMinutes > 180) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Duration',
+                        text: 'Please enter a valid duration between 1 and 180 minutes'
+                    });
+                    return;
+                }
+                duration = customMinutes * 60;
+                durationText = `${customMinutes} minutes`;
+            } else {
+                duration = parseInt(durationSelect);
+                durationText = document.getElementById('quizDuration').selectedOptions[0].text;
+            }
+
+            // Store quiz info
+            quizData.section = section;
+            quizData.grade = grade;
+            quizData.subject = subject;
+            quizData.topic = topic;
+            quizData.duration = duration;
+            quizData.durationText = durationText;
+
+            // Update info banner
+            const fields = {
+                'displaySection': section,
+                'displayGrade': `Grade ${grade}`,
+                'displaySubject': subject,
+                'displayTopic': topic,
+                'displayDuration': durationText
+            };
+            
+            for(const [id, val] of Object.entries(fields)) {
+                const el = document.getElementById(id);
+                if(el) el.textContent = val;
+            }
+            
+            const quizInfoBanner = document.getElementById('quizInfoBanner');
+            if(quizInfoBanner) quizInfoBanner.style.display = 'block';
+
+            closePopup();
+            
+            ['quizInterface', 'saveQuizBtn', 'pdfButtonContainer'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.classList.add('active');
+            });
+
+            // Reset questions for new quiz
+            ['beginner', 'intermediate', 'advance'].forEach(level => {
+                 const container = document.getElementById(`${level}Questions`);
+                 if(container) container.innerHTML = '';
+            });
+
+            // Add initial empty questions
+            addQuestion('beginner');
+            addQuestion('intermediate');
+            addQuestion('advance');
+            
+            updateQuestionCounters();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Quiz Started',
+                text: `Ready to create quiz for ${subject}`,
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+
+        // ==========================================
+        // IMPORT FUNCTIONALITY
+        // ==========================================
+
+        function showImportOptions() {
+            const modal = document.getElementById('importModal');
+            if(modal) {
+                modal.style.display = 'flex';
+                injectDownloadTemplateButton();
+                
+                // Hide Word and Excel Tabs
+                document.querySelectorAll('.import-tab').forEach(tab => {
+                    if (tab.textContent.includes('Word') || tab.textContent.includes('Excel')) {
+                        tab.style.display = 'none';
+                    }
+                });
+                
+                // Force switch to TXT tab
+                document.getElementById('txtImport').style.display = 'block';
+                document.querySelectorAll('.import-tab-content').forEach(c => {
+                    if(c.id !== 'txtImport') c.style.display = 'none';
+                });
+            }
+        }
+
+// In downloadTemplate() function - KEEP THIS FORMAT:
+function downloadTemplate(type) {
+    let content = '';
+    let filename = 'quiz_template.txt';
+    let mimeType = 'text/plain';
+
+    if (type === 'txt') {
+        content = `[BEGINNER]
+1. The earth is round. (TRUE)
+2. Water boils at 100 degrees. (TRUE)
+
+[INTERMEDIATE]
+1. What is the capital of France?
+A. London
+B. Paris ✓
+C. Berlin
+D. Madrid
+
+[ADVANCED]
+1. What is the powerhouse of the cell?
+Answer: Mitochondria`;
+    } 
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+
+        function handleTxtFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('txtContent').value = e.target.result;
+                input.value = ''; 
+                parseTxtQuestions(); // Auto-parse
+            };
+            reader.readAsText(file);
+        }
+
+        function applyImportedQuestions() {
+            parseTxtQuestions();
+        }
+
+function parseTxtQuestions() {
+    const txtArea = document.getElementById('txtContent');
+    if (!txtArea) return;
+    
+    const content = txtArea.value;
+    if (!content.trim()) {
+        Swal.fire('Error', 'No content to import.', 'error');
+        return;
+    }
+
+    Swal.fire({
+        title: 'Processing...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    setTimeout(() => {
+        try {
+            const lines = content.split('\n');
+            let currentLevel = '';
+            let parsedQuestions = [];
+            let currentQuestion = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                // Check for level headers
+                if (line.toUpperCase().includes('[BEGINNER]')) {
+                    currentLevel = 'beginner';
+                    continue;
+                }
+                if (line.toUpperCase().includes('[INTERMEDIATE]')) {
+                    currentLevel = 'intermediate';
+                    continue;
+                }
+                if (line.toUpperCase().includes('[ADVANCED]')) {
+                    currentLevel = 'advance';
+                    continue;
+                }
+                
+                if (!currentLevel) continue;
+                
+                // Check if line starts with number (new question)
+                if (/^\d+[\.)]/.test(line)) {
+                    // Save previous question if exists
+                    if (currentQuestion) {
+                        parsedQuestions.push(currentQuestion);
+                    }
+                    
+                    // Extract question text
+                    let questionText = line.replace(/^\d+[\.)]\s*/, '').trim();
+                    let answerText = '';
+                    let choices = [];
+                    
+                    // ========== FIX: Better TRUE/FALSE parsing ==========
+                    if (currentLevel === 'beginner') {
+                        // Look for (TRUE) or (FALSE) at the end
+                        const tfMatch = questionText.match(/\s*\((TRUE|FALSE|T|F)\)\s*$/i);
+                        if (tfMatch) {
+                            // Extract TRUE/FALSE answer
+                            let tfAnswer = tfMatch[1].toUpperCase();
+                            
+                            // Convert T/F to TRUE/FALSE
+                            if (tfAnswer === 'T') tfAnswer = 'TRUE';
+                            if (tfAnswer === 'F') tfAnswer = 'FALSE';
+                            
+                            answerText = tfAnswer;
+                            
+                            // Remove the parentheses from question text
+                            questionText = questionText.replace(/\s*\((TRUE|FALSE|T|F)\)\s*$/i, '').trim();
+                        } else {
+                            // If no parentheses found, check if answer is implied
+                            // Some formats might have: "1. HTML stands for... TRUE"
+                            const endWords = questionText.split(' ').pop().toUpperCase();
+                            if (endWords === 'TRUE' || endWords === 'FALSE') {
+                                answerText = endWords;
+                                questionText = questionText.substring(0, questionText.lastIndexOf(' ')).trim();
+                            }
+                        }
+                        
+                        console.log(`DEBUG: Beginner question parsed:`);
+                        console.log(`  Question: "${questionText}"`);
+                        console.log(`  Answer: "${answerText}"`);
+                    }
+                    
+                    currentQuestion = {
+                        level: currentLevel,
+                        question: questionText,
+                        answer: answerText,
+                        choices: choices
+                    };
+                    
+                    // For multiple choice, collect choices in following lines
+                    if (currentLevel === 'intermediate') {
+                        let j = i + 1;
+                        while (j < lines.length && lines[j].trim() && 
+                               !lines[j].trim().match(/^\d+[\.)]/) &&
+                               !lines[j].toUpperCase().match(/\[(BEGINNER|INTERMEDIATE|ADVANCED)\]/)) {
+                            
+                            const choiceLine = lines[j].trim();
+                            // Match formats: "A) 32" or "A) 50 ✓" or "A. Paris"
+                            if (choiceLine.match(/^[A-Z][\.)]/)) {
+                                // Extract choice
+                                const choiceText = choiceLine.replace(/^[A-Z][\.)]\s*/, '').trim();
+                                // Check for checkmark
+                                const hasCheckmark = choiceLine.includes('✓');
+                                
+                                // Remove checkmark from text
+                                let cleanChoiceText = choiceText.replace(/\s*✓\s*$/, '').trim();
+                                
+                                currentQuestion.choices.push({
+                                    text: cleanChoiceText,
+                                    is_correct: hasCheckmark
+                                });
+                                
+                                if (hasCheckmark) {
+                                    currentQuestion.answer = cleanChoiceText;
+                                }
+                            }
+                            j++;
+                        }
+                        i = j - 1; // Skip processed lines
+                    }
+                    
+                    // For advanced, look for answer on next line
+                    if (currentLevel === 'advance') {
+                        let j = i + 1;
+                        while (j < lines.length && lines[j].trim()) {
+                            const nextLine = lines[j].trim().toLowerCase();
+                            if (nextLine.startsWith('answer:')) {
+                                currentQuestion.answer = lines[j].replace(/answer:\s*/i, '').trim();
+                                i = j; // Skip answer line
+                                break;
+                            } else if (lines[j].trim().match(/^\d+[\.)]/) || 
+                                       lines[j].toUpperCase().match(/\[(BEGINNER|INTERMEDIATE|ADVANCED)\]/)) {
+                                // Next question or new section
+                                break;
+                            }
+                            j++;
+                        }
+                    }
+                }
+            }
+            
+            // Add the last question
+            if (currentQuestion) {
+                parsedQuestions.push(currentQuestion);
+            }
+            
+            // Debug log
+            console.log('Parsed questions:', parsedQuestions);
+            
+            if (parsedQuestions.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Questions Found',
+                    text: 'Please check your format and try again.'
+                });
+                return;
+            }
+            
+            // Render questions
+            renderQuestionsFromData(parsedQuestions);
+            
+            closeImportModal();
+            Swal.fire({
+                icon: 'success',
+                title: 'Import Complete!',
+                html: `<div style="text-align: left;">
+                    <p><strong>Successfully imported ${parsedQuestions.length} questions:</strong></p>
+                    <p>• Beginner: ${parsedQuestions.filter(q => q.level === 'beginner').length}</p>
+                    <p>• Intermediate: ${parsedQuestions.filter(q => q.level === 'intermediate').length}</p>
+                    <p>• Advanced: ${parsedQuestions.filter(q => q.level === 'advance').length}</p>
+                </div>`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+        } catch (error) {
+            console.error('Parse error:', error);
+            Swal.fire('Error', 'Failed to parse questions: ' + error.message, 'error');
+        }
+    }, 50);
+}
+
+        // --- Common Rendering Logic ---
+
+function renderQuestionsFromData(questionsArray) {
+    // Clear existing questions
+    document.querySelectorAll('.question-item').forEach(item => item.remove());
+
+    const fragments = {
+        beginner: document.createDocumentFragment(),
+        intermediate: document.createDocumentFragment(),
+        advance: document.createDocumentFragment()
+    };
+    
+    questionsArray.forEach((q, index) => {
+        // Normalize level
+        let lvl = q.level.toLowerCase();
+        
+        if (!fragments[lvl]) return;
+
+        const questionId = `${lvl}-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'question-item';
+        questionDiv.id = questionId;
+
+        let innerHTML = `
+            <div class="question-header">
+                <div class="question-label">Question</div>
+                <button type="button" class="remove-question-btn" onclick="removeQuestion('${questionId}', '${lvl}')">Remove</button>
+            </div>
+            <textarea class="question-box" id="${questionId}-text" placeholder="Enter your question...">${escapeHtml(q.question)}</textarea>
+            <div class="answer-label">Answer:</div>
+        `;
+
+        if (lvl === 'beginner') {
+            const answer = (q.answer || '').toUpperCase();
+            const isTrue = answer === 'TRUE';
+            const isFalse = answer === 'FALSE';
+            
+            console.log(`DEBUG: Rendering beginner question - Answer: "${answer}", isTrue: ${isTrue}, isFalse: ${isFalse}`);
+            
+            innerHTML += `
+                <div class="true-false-buttons">
+                    <button type="button" class="tf-button ${isTrue ? 'selected' : ''}" onclick="selectTF(this)">TRUE</button>
+                    <button type="button" class="tf-button ${isFalse ? 'selected' : ''}" onclick="selectTF(this)">FALSE</button>
+                </div>
+            `;
+        } 
+        else if (lvl === 'intermediate') {
+            innerHTML += `<div class="choices-label">Choices</div><div class="choices-container">`;
+            
+            const choicesList = q.choices || [];
+            
+            for (let k = 0; k < Math.max(choicesList.length, 4); k++) {
+                let cText = '';
+                let isCorrect = false;
+
+                if (k < choicesList.length) {
+                    cText = choicesList[k].text || '';
+                    isCorrect = choicesList[k].is_correct || choicesList[k].isCorrect || false;
+                }
+                
+                innerHTML += `
+                    <div class="choice-item">
+                        <input type="radio" name="${questionId}-choices" class="choice-radio" ${isCorrect ? 'checked' : ''}>
+                        <input type="text" class="choice-input" value="${escapeHtml(cText)}" placeholder="Choice ${k + 1}">
+                        <button type="button" class="delete-button" onclick="removeChoice(this)">-</button>
+                    </div>
+                `;
+            }
+            innerHTML += `</div><button type="button" class="add-choice-btn" onclick="addChoice('${questionId}')">+ Add Choice</button>`;
+
+        } 
+        else if (lvl === 'advance') {
+            innerHTML += `<input type="text" class="answer-input" value="${escapeHtml(q.answer || '')}" placeholder="Enter the correct answer...">`;
+        }
+
+        questionDiv.innerHTML = innerHTML;
+        fragments[lvl].appendChild(questionDiv);
+    });
+
+    ['beginner', 'intermediate', 'advance'].forEach(lvl => {
+        const container = document.getElementById(`${lvl}Questions`);
+        if(container && fragments[lvl].childElementCount > 0) {
+            container.appendChild(fragments[lvl]);
+            updateQuestionNumbers(lvl);
+        }
+    });
+
+    updateQuestionCounters();
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+        // --- Client-Side TXT Parser ---
+
+        function processImport(content) {
+            try {
+                const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+                let currentLevel = '';
+                let parsedQuestions = [];
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    
+                    if (/\[?\s*BEGIN+ER\s*\]?/i.test(line)) { currentLevel = 'beginner'; continue; }
+                    if (/\[?\s*INTERMEDIATE\s*\]?/i.test(line)) { currentLevel = 'intermediate'; continue; }
+                    if (/\[?\s*ADVANCED?\s*\]?/i.test(line)) { currentLevel = 'advance'; continue; }
+                    
+                    if (!currentLevel) continue;
+
+                    let cleanLine = line.replace(/^\d+[\.)]\s*/, '');
+                    let questionText = cleanLine;
+                    let answerText = '';
+                    let choices = [];
+
+                    const match = cleanLine.match(/(.*)\(([^)]+)\)\s*$/);
+                    if (match) {
+                        questionText = match[1].trim();
+                        answerText = match[2].trim();
+                    }
+
+                    if (currentLevel === 'intermediate') {
+                        while (i + 1 < lines.length) {
+                            const nextLine = lines[i + 1];
+                            const choiceMatch = nextLine.match(/^[A-Z][\.)]\s*(.*)/i);
+                            
+                            if (choiceMatch) {
+                                let cText = choiceMatch[1].trim();
+                                let isCorrect = false;
+                                
+                                const markerRegex = /(\s*✓|\s*\[CORRECT\]|\s*\[X\]|\s*\(X\))/i;
+                                if (markerRegex.test(cText)) {
+                                    isCorrect = true;
+                                    cText = cText.replace(markerRegex, '').trim();
+                                }
+                                // Fallback: Check if choice matches extracted Answer text
+                                if (!isCorrect && answerText && cText.toLowerCase() === answerText.toLowerCase()) {
+                                    isCorrect = true;
+                                }
+
+                                choices.push({ text: cText, is_correct: isCorrect });  // Use snake_case
+                                i++; 
+                            } else {
+                                break; 
+                            }
+                        }
+                    } else if (currentLevel === 'advance') {
+                        if (i + 1 < lines.length) {
+                            const nextLine = lines[i + 1];
+                            if (nextLine.toLowerCase().startsWith('answer:')) {
+                                answerText = nextLine.substring(7).trim();
+                                i++;
+                            }
+                        }
+                    }
+
+                    parsedQuestions.push({
+                        level: currentLevel,
+                        question: questionText,
+                        answer: answerText,
+                        choices: choices 
+                    });
+                }
+
+                if (parsedQuestions.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Questions Parsed',
+                        html: 'Could not detect any questions.'
+                    });
+                    return;
+                }
+
+                renderQuestionsFromData(parsedQuestions);
+                
+                closeImportModal();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Import Successful',
+                    text: `Imported ${parsedQuestions.length} questions.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+            } catch (e) {
+                console.error("Import error:", e);
+                closeImportModal();
+                Swal.fire('Error', 'Import failed: ' + e.message, 'error');
+            }
+        }
+
+        function createChoiceHTML(questionId, index, text, isChecked) {
+            return `
+                <div class="choice-item">
+                    <input type="radio" name="${questionId}-choices" class="choice-radio" ${isChecked ? 'checked' : ''}>
+                    <input type="text" class="choice-input" value="${text}" placeholder="Choice ${index + 1}">
+                    <button type="button" class="delete-button" onclick="removeChoice(this)">-</button>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // QUIZ LOGIC
+        // ==========================================
+
+        function addQuestion(level) {
+            const container = document.getElementById(`${level}Questions`);
+            if(!container) return;
+            
+            const questionNum = container.children.length + 1;
+            const questionId = `${level}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+
+            let questionHTML = `
+                <div class="question-item" id="${questionId}">
+                    <div class="question-header">
+                        <div class="question-label">Question ${questionNum}</div>
+                        <button type="button" class="remove-question-btn" onclick="removeQuestion('${questionId}', '${level}')">Remove</button>
+                    </div>
+                    <textarea class="question-box" id="${questionId}-text" name="${questionId}-text" placeholder="Enter your question..."></textarea>
+                    <div class="answer-label">Answer:</div>
+            `;
+
+            if (level === 'beginner') {
+                questionHTML += `
+                    <div class="true-false-buttons">
+                        <button type="button" class="tf-button" onclick="selectTF(this)">TRUE</button>
+                        <button type="button" class="tf-button" onclick="selectTF(this)">FALSE</button>
+                    </div>
+                `;
+            } else if (level === 'intermediate') {
+                questionHTML += `
+                    <div class="choices-label">Choices</div>
+                    <div class="choices-container">
+                        ${createChoice(questionId, 0)}
+                        ${createChoice(questionId, 1)}
+                        ${createChoice(questionId, 2)}
+                        ${createChoice(questionId, 3)}
+                    </div>
+                    <button type="button" class="add-choice-btn" onclick="addChoice('${questionId}')">+ Add Choice</button>
+                `;
+            } else {
+                questionHTML += `<input type="text" class="answer-input" placeholder="Enter the correct answer...">`;
+            }
+
+            questionHTML += `</div>`;
+            container.insertAdjacentHTML('beforeend', questionHTML);
+            updateQuestionCounters();
+        }
+
+function saveQuiz() {
+    // Quick validation first
+    if (!quizData.subject || !quizData.section) {
+        Swal.fire('Error', 'Please set up quiz info first', 'error');
+        return;
+    }
+    
+    // Build payload quickly
+    const quizPayload = {
+        section: quizData.section,
+        subject: quizData.subject,
+        topic: quizData.topic || "General",
+        grade: quizData.grade || 7,
+        duration: quizData.duration || 300,
+        questions: []
+    };
+    
+    // Quick collection of questions
+    ['beginner', 'intermediate', 'advance'].forEach(level => {
+        const questions = document.querySelectorAll(`#${level}Questions .question-item`);
+        questions.forEach(item => {
+            const questionText = item.querySelector('.question-box')?.value.trim();
+            if (!questionText) return;
+            
+            const questionData = {
+                level: level,
+                type: level === 'beginner' ? 'true_false' : 
+                      level === 'intermediate' ? 'multiple_choice' : 'short_answer',
+                question: questionText,
+                points: 1
+            };
+            
+            if (level === 'beginner') {
+                const selected = item.querySelector('.tf-button.selected');
+                if (selected) {
+                    questionData.answer = selected.textContent.toUpperCase();
+                }
+            } 
+            else if (level === 'intermediate') {
+                const choices = [];
+                let answer = '';
+                
+                const choiceInputs = item.querySelectorAll('.choice-input');
+                const choiceRadios = item.querySelectorAll('.choice-radio');
+                
+                choiceInputs.forEach((input, idx) => {
+                    const choiceText = input.value.trim();
+                    if (choiceText) {
+                        const isCorrect = choiceRadios[idx]?.checked || false;
+                        choices.push({
+                            text: choiceText,
+                            is_correct: isCorrect  // Use snake_case
+                        });
+                        
+                        if (isCorrect) {
+                            answer = choiceText;
+                        }
+                    }
+                });
+                
+                if (choices.length >= 2 && answer) {
+                    questionData.choices = choices;
+                    questionData.answer = answer;
+                } else {
+                    return; // Skip incomplete question
+                }
+            }
+            else if (level === 'advance') {
+                const answer = item.querySelector('.answer-input')?.value.trim();
+                if (answer) {
+                    questionData.answer = answer;
+                } else {
+                    return; // Skip incomplete question
+                }
+            }
+            
+            quizPayload.questions.push(questionData);
+        });
+    });
+    
+    if (quizPayload.questions.length === 0) {
+        Swal.fire('Error', 'No valid questions found', 'error');
+        return;
+    }
+    
+    // Show simple loading
+    Swal.fire({
+        title: 'Saving...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    // Send request
+    fetch('/api/save_quiz', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(quizPayload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Quiz Saved!',
+                html: `Quiz Code: <strong>${data.quiz_code}</strong><br>
+                       Questions: ${quizPayload.questions.length}`,
+                timer: 2000
+            }).then(() => {
+                window.location.href = '/menu_action?menu=session';
+            });
+        } else {
+            Swal.fire('Error', data.message || 'Save failed', 'error');
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire('Error', 'Network error: ' + error.message, 'error');
+    });
+}
+
+
+        function generatePrintContent() {
+            let printContent = `
+                <div class="print-content">
+                    <div class="print-header">
+                        <h1>GENERAL TINIO NATIONAL HIGH SCHOOL</h1>
+                        <h2>SMART QUIZ SYSTEM</h2>
+                        <h3>${quizData.subject} - ${quizData.topic}</h3>
+                        <p>Section: ${quizData.section} | Grade: ${quizData.grade}</p>
+                        <p>Duration: ${quizData.durationText}</p>
+                    </div>
+            `;
+
+            const sections = [
+                {id: 'beginnerQuestions', title: 'BEGINNER LEVEL (True/False)'},
+                {id: 'intermediateQuestions', title: 'INTERMEDIATE LEVEL (Multiple Choice)'},
+                {id: 'advanceQuestions', title: 'ADVANCED LEVEL (Short Answer)'}
+            ];
+
+            sections.forEach(sec => {
+                const items = document.querySelectorAll(`#${sec.id} .question-item`);
+                if(items.length > 0) {
+                    printContent += `<div style="margin-top: 30px;"><h3>${sec.title}</h3>`;
+                    items.forEach((item, index) => {
+                        const qVal = item.querySelector('.question-box').value;
+                        if(!qVal) return;
+                        
+                        if(sec.id === 'beginnerQuestions') {
+                            const sel = item.querySelector('.tf-button.selected');
+                            printContent += `<div class="print-question">${index+1}. ${qVal} [${sel ? sel.textContent : ''}]</div>`;
+                        } else if(sec.id === 'intermediateQuestions') {
+                            printContent += `<div class="print-question">${index+1}. ${qVal}</div><div class="print-choices">`;
+                            const choices = item.querySelectorAll('.choice-input');
+                            const checked = item.querySelector('.choice-radio:checked');
+                            choices.forEach((c, i) => {
+                                if(c.value) {
+                                    const isCor = checked && item.querySelectorAll('.choice-radio')[i] === checked;
+                                    printContent += `<div>${String.fromCharCode(65+i)}. ${c.value} ${isCor?'(Correct)':''}</div>`;
+                                }
+                            });
+                            printContent += `</div>`;
+                        } else {
+                            const ans = item.querySelector('.answer-input').value;
+                            printContent += `<div class="print-question">${index+1}. ${qVal} <br><em>Answer: ${ans}</em></div>`;
+                        }
+                    });
+                    printContent += `</div>`;
+                }
+            });
+
+            printContent += '</div>';
+            return printContent;
+        }
+
+        function printCompleteQuiz() {
+            const printContent = generatePrintContent();
+            const printArea = document.getElementById('printArea');
+            if(printArea) {
+                printArea.innerHTML = printContent;
+                printArea.style.display = 'block';
+                window.print();
+                printArea.style.display = 'none';
+            }
+        }
+
+        function downloadQuizPDF() {
+            try {
+                const printContent = generatePrintContent();
+                
+                Swal.fire({
+                    title: 'Generating PDF...',
+                    html: 'Please wait...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const element = document.createElement('div');
+                element.innerHTML = printContent;
+                element.style.padding = '20px';
+
+                const filename = `Quiz_${quizData.subject}.pdf`.replace(/\s+/g, '_');
+
+                const opt = {
+                    margin: 10,
+                    filename: filename,
+                    image: { type: 'jpeg', quality: 0.85 },
+                    html2canvas: { scale: 1.5, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                if (typeof html2pdf === 'undefined') {
+                    throw new Error('PDF library missing.');
+                }
+
+                html2pdf().set(opt).from(element).save().then(() => {
+                    Swal.close();
+                    Swal.fire({ icon: 'success', title: 'PDF Saved', timer: 1500, showConfirmButton: false });
+                }).catch(err => {
+                    Swal.close();
+                    console.error(err);
+                });
+            } catch (error) {
+                Swal.close();
+                Swal.fire('Error', 'PDF Error: ' + error.message, 'error');
+            }
+        }
+
+
+
+        // Test connection function
+function testConnection() {
+    fetch('/api/test_setup')
+        .then(response => response.json())
+        .then(data => {
+            Swal.fire({
+                title: 'Connection Test',
+                html: `<pre style="text-align: left; max-height: 400px; overflow: auto;">${JSON.stringify(data, null, 2)}</pre>`,
+                width: '700px'
+            });
+        })
+        .catch(error => {
+            Swal.fire('Error', 'Cannot connect to server: ' + error.message, 'error');
+        });
+}
+
+
+        function logout() {
+            Swal.fire({
+                title: "Confirm Logout",
+                text: "Are you sure?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                confirmButtonText: "Logout"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "/process_logout";
+                }
+            });
+        }
+    </script>
+</body>
+</html>
